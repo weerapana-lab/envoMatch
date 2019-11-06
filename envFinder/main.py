@@ -35,7 +35,7 @@ def main():
 
     #done once
     pepStats = read_pep_stats('/Volumes/Data/msData/ms2_anotator/citFinder/rorpad_mouse/peptide_cit_stats.tsv')
-    pepStats = pepStats[pepStats['precursor_scan'] == 8468]
+    #pepStats = pepStats[pepStats['precursor_scan'] == 8468]
 
     #done once
     cit_tableFname = '/Users/Aaron/local/envFinder/db/atom_tables/cit_diff_mod_atoms.txt'
@@ -56,7 +56,7 @@ def main():
 
     nRow = len(pepStats.index)
     for i, row in pepStats.iterrows():
-        print('Working on {} of {}'.format(i, nRow))
+        #print('Working on {} of {}'.format(i, nRow))
 
         cit_composition = cit_atomTable.getComposition(row['sequence'], row['charge'])
         env = src.getEnvelope(cit_composition)
@@ -70,7 +70,7 @@ def main():
         #
         # cEnv.add(actualEnv)
 
-        print('poop')
+        print('{}\t{}'.format(row['sequence'], cit_atomTable.getMass(row['sequence'])))
 
         #fig, (ax1, ax2) = plt.subplots(2, 1, sharex = True)
         #ax1 = plotEnv(ax1, env)

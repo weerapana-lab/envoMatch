@@ -12,7 +12,18 @@ class AtomTable:
     _nTermStr = 'N_term'
     _cTermStr = 'C_term'
 
-
+    _atom_masses = {"C": (12.011, 12),
+                    "H": (1.008, 1.00783),
+                    "O": (15.999, 15.99491),
+                    "N": (14.007, 14.00307),
+                    "S": (32.06, 31.97207),
+                    "P": (30.97376, 30.97376),
+                    "N[15]": (15.00011, 15.00011),
+                    "H[2]": (2.0141, 2.0141),
+                    "C[13]": (13.00335, 13.00335),
+                    "Se": (78.96, 79.91652),
+                    "Cl": (35.45, 34.96885),
+                    "Br": (79.904, 78.91834)}
 
     def __init__(self, fname:str = ''):
         self.fname = fname
@@ -66,7 +77,7 @@ class AtomTable:
         return True
 
 
-    def getComposition(self, seq: str, charge: int = 1,
+    def _getComposition(self, seq: str,
                        nTerm = True, cTerm = True):
 
         tempDict = Counter()
@@ -76,8 +87,26 @@ class AtomTable:
         if nTerm: tempDict.update(self.composition[AtomTable._nTermStr])
         if cTerm: tempDict.update(self.composition[AtomTable._cTermStr])
 
-        return Composition(tempDict, charge = charge)
+        return tempDict
 
+
+    def getComposition(self, seq: str, charge: int = 1,
+                       nTerm = True, cTerm = True):
+
+        return Composition(self._getComposition(seq, nTerm, cTerm), charge = charge)
+
+
+    def getMass(self, seq: str, mono = True,
+                nTerm = True, cTerm = True) -> float:
+
+        comp = self._getComposition(seq, nTerm, cTerm)
+
+        massIndex = 1 if mono else 0
+        ret = float(0)
+        for atom, count in comp.items():
+            ret += self._atom_masses[atom][massIndex] * count
+
+        return ret
 
 class AverageIsotope():
     __slots__ = ['_count', '_mzSum', 'intSum', 'avg_mz']
