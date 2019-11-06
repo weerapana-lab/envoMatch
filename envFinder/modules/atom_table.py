@@ -6,11 +6,13 @@ from sortedcontainers import SortedList
 from pyteomics.mass import Composition
 from pyteomics.mass.mass import isotopologues
 
-import utils
+from .utils import inRange, find_nearest_index
 
 class AtomTable:
     _nTermStr = 'N_term'
     _cTermStr = 'C_term'
+
+
 
     def __init__(self, fname:str = ''):
         self.fname = fname
@@ -139,9 +141,9 @@ def getEnvelope(composition: Composition,
     if combineDefects:
         masses = SortedList(key = lambda x: x.avg_mz)
         for isotope in temp:
-            idx = utils.find_nearest_index(masses, isotope[0], arrKey = lambda x: x.avg_mz)
+            idx = find_nearest_index(masses, isotope[0], arrKey = lambda x: x.avg_mz)
 
-            if masses and utils.inRange(isotope[0], masses[idx].avg_mz, mass_defect_match_range):
+            if masses and inRange(isotope[0], masses[idx].avg_mz, mass_defect_match_range):
                 masses[idx].append(isotope)
             else:
                 masses.add(AverageIsotope(isotope[0], isotope[1]))

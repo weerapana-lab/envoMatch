@@ -1,2 +1,2 @@
 
-from .atom_table import AverageIsotope
+from .main import main
