@@ -2,6 +2,7 @@
 .DS_store
 .idea/*
 testFiles/*
+test/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
