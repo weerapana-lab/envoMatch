@@ -1,14 +1,12 @@
 
-from pyteomics import ms1 as Ms1File
 import sys
-import matplotlib.pyplot as plt
 
+import matplotlib.pyplot as plt
 import pandas as pd
 
-import atom_table
-import parse_args
-import ms1
-
+from .atom_table import AtomTable, getEnvelope
+from .parse_args import parseArgs
+from .ms1 import Ms1File
 
 def read_pep_stats(fnane):
     cols = ['sequence', 'parent_mz', 'charge', 'scan', 'precursor_scan', 'parent_file']
@@ -31,17 +29,22 @@ def plotEnv(ax, env):
     return ax
 
 
+#def
+
+
 def main():
-    args = parse_args.parseArgs()
+    args = parseArgs()
 
     #done once
     pepStats = read_pep_stats('/Volumes/Data/msData/ms2_anotator/citFinder/rorpad_mouse/peptide_cit_stats.tsv')
     pepStats = pepStats[pepStats['precursor_scan'] == 8468]
 
     #done once
-    atomTableFname = '/Users/Aaron/local/envFinder/db/atom_tables/cit_diff_mod_atoms.txt'
-    atomTable = atom_table.AtomTable(atomTableFname)
-    if not atomTable.read():
+    cit_tableFname = '/Users/Aaron/local/envFinder/db/atom_tables/cit_diff_mod_atoms.txt'
+    arg_tableFname = '/Users/Aaron/local/envFinder/db/atom_tables/default_residue_atoms.txt'
+    cit_atomTable = AtomTable(cit_tableFname)
+    arg_atomTable = AtomTable(arg_tableFname)
+    if not cit_atomTable.read() or not arg_atomTable.read():
         exit()
 
     #replace
@@ -57,25 +60,28 @@ def main():
     for i, row in pepStats.iterrows():
         print('Working on {} of {}'.format(i, nRow))
 
-        c = atomTable.getComposition(row['sequence'], row['charge'])
-        env = atom_table.getEnvelope(c)
-
+        cit_composition = cit_atomTable.getComposition(row['sequence'], row['charge'])
+        env = getEnvelope(cit_composition)
 
         spec = ms1File.get_by_id(str(row['precursor_scan']).zfill(6))
 
-        
-
         actualEnv = ms1.findEnvelope(env, spec)
 
-        #fig, (ax1, ax2) = plt.subplots(2, 1, sharex = True)
-        #ax1 = plotEnv(ax1, env)
-        #ax2 = plotEnv(ax2, actualEnv)
+        # cEnv = consensusEnvelope.ConsensusEnvelope()
+        # cEnv.initalize(env, 'cit')
+        #
+        # cEnv.add(actualEnv)
 
-        #plt.savefig('/Users/Aaron/local/envFinder/testFiles/test_env_{}.pdf'.format(row['scan']))
-        #plt.close('all')
+        print('poop')
+
+        fig, (ax1, ax2) = plt.subplots(2, 1, sharex = True)
+        ax1 = plotEnv(ax1, env)
+        ax2 = plotEnv(ax2, actualEnv)
+
+        plt.savefig('/Users/Aaron/local/envFinder/testFiles/test_env_{}.pdf'.format(row['scan']))
+        plt.close('all')
 
 
 
 if __name__ == "__main__":
-    #main()
-    drawMassDefectExample()
+    main()

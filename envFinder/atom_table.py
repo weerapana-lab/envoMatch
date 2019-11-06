@@ -1,7 +1,7 @@
 
 import sys
 from collections import Counter
-from functools import cmp_to_key
+from sortedcontainers import SortedList
 
 from pyteomics.mass import Composition
 from pyteomics.mass.mass import isotopologues
@@ -107,10 +107,10 @@ class AverageIsotope():
 
 
     def __lt__(self, rhs: float) -> bool:
-        self.avg_mz < rhs
+        return self.avg_mz < rhs
 
     def __gt__(self, rhs: float) -> bool:
-        self.avg_mz > rhs
+        return self.avg_mz > rhs
 
     def compare(self, rhs) -> int:
         if self.avg_mz < rhs.avg_mz:
@@ -137,18 +137,14 @@ def getEnvelope(composition: Composition,
 
     #combine and average mass defects
     if combineDefects:
-        masses = list()
+        masses = SortedList(key = lambda x: x.avg_mz)
         for isotope in temp:
             idx = utils.find_nearest_index(masses, isotope[0], arrKey = lambda x: x.avg_mz)
 
             if masses and utils.inRange(isotope[0], masses[idx].avg_mz, mass_defect_match_range):
                 masses[idx].append(isotope)
             else:
-                masses.append(AverageIsotope(isotope[0], isotope[1]))
-
-                #I'm assuming that its ok to only sort when a new value is added.
-                #This may be something to try changing if a bug is found.
-                masses.sort(key=cmp_to_key(AverageIsotope.compare))
+                masses.add(AverageIsotope(isotope[0], isotope[1]))
 
         return [x.value() for x in masses]
     else:
