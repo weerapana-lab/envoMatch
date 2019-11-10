@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from math import isclose
 
-from .utils import lower_bound
+from .utils import lower_bound, inRange
 
 class Isotope(object):
     __slots__ = ['mz', 'int']
@@ -71,26 +71,6 @@ def _getTolerance(toleranceType: str, _range: float):
         raise ValueError('{} is a invalid argument for toleranceType'.format(toleranceType))
 
 
-def _getToleranceFunction(toleranceType: str, _range: float):
-    '''
-    Get function to determine whether m/z matches are in the
-    tolerance _range.
-
-    :param toleranceType: Tolerance units, either ppm or th.
-    :type toleranceType: str
-    :param _range: Tolerance above and below.
-    :type _range: float
-    :return: function
-    '''
-
-    if toleranceType == 'th':
-        return lambda value, compare: abs(value - compare) <= _range
-    elif toleranceType == 'ppm':
-        return lambda value, compare: abs(value - compare) <= (value * (_range / 1e6))
-    else:
-        raise ValueError('{} is a invalid argument for toleranceType'.format(toleranceType))
-
-
 class ConsensusEnvelope(object):
 
     @staticmethod
@@ -104,7 +84,6 @@ class ConsensusEnvelope(object):
 
     def __init__(self, actual: List[DataPoint] = None, theoretical: List[Isotope] = None,
                  tolerance: float = 50, toleranceType:str = 'ppm', best_match_tie = 'intensity'):
-        self._inRange = _getToleranceFunction(toleranceType, tolerance)
         self.getTolerance = _getTolerance(toleranceType, tolerance)
         self._actual : List = actual
         self._theoretical : List = theoretical
@@ -139,7 +118,7 @@ class ConsensusEnvelope(object):
         #indices = [x for x in self._theoretical if self._inRange(x.point.mz, self._mono_mz)]
         indices = list()
         for i, x in enumerate(self._theoretical):
-            if self._inRange(x.point.mz, self._mono_mz):
+            if inRange(x.point.mz, self._mono_mz, self.getTolerance(self._mono_mz)):
                 indices.append(i)
 
         if len(indices) != 1:
@@ -169,7 +148,7 @@ class ConsensusEnvelope(object):
             range_list = list()
             best_i = 0
             for j in range(low_i, len(self._actual), 1):
-                if self._inRange(self._actual[j].point.mz, peak.point.mz):
+                if inRange(self._actual[j].point.mz, peak.point.mz, self.getTolerance(self._actual[j].point.mz)):
                     range_list.append(j)
 
             if len(range_list) == 0:
