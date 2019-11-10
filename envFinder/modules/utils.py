@@ -25,6 +25,40 @@ def _numericalCompare(lhs, rhs,
         return 0
 
 
+def lower_bound(array, value,
+                arrKey = lambda x: x,
+                valueKey = lambda x: x,
+                comp = _numericalCompare) -> int:
+    '''
+    Return the value i such that all e in array[:i] have e < value
+    and all e in array[i:] have e >= value.
+
+    :param array: sorted, iterable object
+    :param value: numeric value (float or int)
+    :param arrKey: key to access compare value of elements in array
+    :param valueKey: key to access compare value in value
+    :param comp: compare method
+    :return: index of closest value in array
+    :type int:
+    '''
+
+    lo: int = 0
+    hi: int = len(array) - 1
+
+    while lo < hi:
+        mid = (lo+hi)//2
+
+        comp_temp = comp(array[mid], value, arrKey, valueKey)
+        if comp_temp == -1:
+            lo = mid + 1
+        elif comp_temp == 1 or comp_temp == 0:
+            hi = mid
+        else:
+            raise RuntimeError('Invalid compare value!')
+
+    return lo
+
+
 def find_nearest_index(array, value,
                        arrKey = lambda x: x,
                        valueKey = lambda x: x,

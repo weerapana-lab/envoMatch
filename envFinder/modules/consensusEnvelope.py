@@ -2,8 +2,10 @@
 from typing import List
 import sys
 import numpy as np
+import matplotlib.pyplot as plt
+from math import isclose
 
-from .utils import find_nearest_index
+from .utils import lower_bound
 
 class Isotope(object):
     __slots__ = ['mz', 'int']
@@ -39,31 +41,52 @@ class DataPoint(object):
         if pretty_print:
             out.write('{}, {}'.format(self.point.mz, self.point.int))
             if print_link:
-                out.write(' -> {}, {}'.format(self.link.point.mz, self.link.point.int))
+                if self.link is not None:
+                    out.write(' -> {}, {}'.format(self.link.point.mz, self.link.point.int))
             out.write('\n')
         else:
             out.write('{}\t{}'.format(self.point.mz, self.point.int))
             if print_link:
-                out.write('\t{}\t{}'.format(self.link.point.mz, self.link.point.int))
+                if self.link is not None:
+                    out.write(' -> {}, {}'.format(self.link.point.mz, self.link.point.int))
             out.write('\n')
 
 
-def _getToleranceFunction(toleranceType: str, range: float):
+def _getTolerance(toleranceType: str, _range: float):
     '''
-    Get function to determine whether m/z matches are in the
-    tolerance range.
+    Get function to return m/z +- tolerance.
 
     :param toleranceType: Tolerance units, either ppm or th.
     :type toleranceType: str
-    :param range: Tolerance above and below.
-    :type range: float
+    :param _range: Tolerance above and below.
+    :type _range: float
     :return: function
     '''
 
     if toleranceType == 'th':
-        return lambda value, compare: abs(value - compare) <= range
+        return lambda value : _range
     elif toleranceType == 'ppm':
-        return lambda value, compare: abs(value - (compare * (range / 1e6))) <= value
+        return lambda value: (value * (_range / 1e6))
+    else:
+        raise ValueError('{} is a invalid argument for toleranceType'.format(toleranceType))
+
+
+def _getToleranceFunction(toleranceType: str, _range: float):
+    '''
+    Get function to determine whether m/z matches are in the
+    tolerance _range.
+
+    :param toleranceType: Tolerance units, either ppm or th.
+    :type toleranceType: str
+    :param _range: Tolerance above and below.
+    :type _range: float
+    :return: function
+    '''
+
+    if toleranceType == 'th':
+        return lambda value, compare: abs(value - compare) <= _range
+    elif toleranceType == 'ppm':
+        return lambda value, compare: abs(value - compare) <= (value * (_range / 1e6))
     else:
         raise ValueError('{} is a invalid argument for toleranceType'.format(toleranceType))
 
@@ -80,11 +103,15 @@ class ConsensusEnvelope(object):
     #    for i in
 
     def __init__(self, actual: List[DataPoint] = None, theoretical: List[Isotope] = None,
-                 tolerance: float = 50, toleranceType:str = 'ppm'):
+                 tolerance: float = 50, toleranceType:str = 'ppm', best_match_tie = 'intensity'):
         self._inRange = _getToleranceFunction(toleranceType, tolerance)
+        self.getTolerance = _getTolerance(toleranceType, tolerance)
         self._actual : List = actual
         self._theoretical : List = theoretical
         self.initialized = False
+        self._mono_mz = None
+        self._mono_index = None
+        self._best_match_tie = best_match_tie
 
 
     def setActual(self, actual: list):
@@ -97,6 +124,27 @@ class ConsensusEnvelope(object):
         self._clearLinks(self._actual)
         self.initialized = False
         self._theoretical = theoretical
+
+
+    def set_mono(self, mono_mz: float = None,
+                 mono_mass: float = None, charge: int = None):
+
+        if mono_mz is not None:
+            self._mono_mz = mono_mz
+        elif mono_mass is not None and charge is not None:
+            self._mono_mz = (mono_mass + charge) / charge
+        else:
+            raise RuntimeError('Either mono_mz or mono_mass and charge are required!')
+
+        #indices = [x for x in self._theoretical if self._inRange(x.point.mz, self._mono_mz)]
+        indices = list()
+        for i, x in enumerate(self._theoretical):
+            if self._inRange(x.point.mz, self._mono_mz):
+                indices.append(i)
+
+        if len(indices) != 1:
+            raise RuntimeError('Could not find mono_mz in theoretical env!')
+        self._mono_index = indices[0]
 
 
     def iterActual(self):
@@ -113,13 +161,37 @@ class ConsensusEnvelope(object):
         self._clearLinks(self._actual)
 
         for i, peak in enumerate(self._theoretical):
-            best_i = find_nearest_index(self._actual, peak,
-                                        valueKey= lambda x: x.point.mz,
-                                        arrKey = lambda x: x.point.mz)
 
-            if self._inRange(self._actual[best_i].point.mz, peak.point.mz):
-                self._actual[best_i].link = peak
-                self._theoretical[i].link = self._actual[best_i]
+            low_i = lower_bound(self._actual, peak,
+                                valueKey = lambda x: x.point.mz - self.getTolerance(x.point.mz),
+                                arrKey = lambda x: x.point.mz)
+
+            range_list = list()
+            best_i = 0
+            for j in range(low_i, len(self._actual), 1):
+                if self._inRange(self._actual[j].point.mz, peak.point.mz):
+                    range_list.append(j)
+
+            if len(range_list) == 0:
+                continue
+            elif len(range_list) == 1:
+                best_i = range_list[0]
+            else:
+                tempMax = range_list[0]
+                if self._best_match_tie == 'intensity':
+                    def _temp_compare(lhs, rhs):
+                        return lhs.point.int > rhs.point.int
+                else:
+                    def _temp_compare(lhs, rhs):
+                        return lhs.point.mz > rhs.point.mz
+
+                for j in range_list:
+                    if _temp_compare(self._actual[j], self._actual[tempMax]):
+                        tempMax = j
+                best_i = tempMax
+
+            self._actual[best_i].link = peak
+            self._theoretical[i].link = self._actual[best_i]
 
         if remove_unlabeled:
             self._actual = [x for x in self._actual if x.link is not None]
@@ -149,6 +221,57 @@ class ConsensusEnvelope(object):
 
 
     def plotEnv(self, fname:str):
-        pass
+        fig, ax1 = plt.subplots()
+
+        #general properties of plot
+        plt.margins(y = 0)
+        plt.ylim(0, 1.1)
+        plt.xlabel('m/z')
+        plt.ylabel('Relative intensity')
+
+        #plot actual spectra
+        _, stemlines, _ = ax1.stem([x.point.mz for x in self._actual],
+                                   [x.point.int for x in self._actual],
+                                   basefmt = ' ', markerfmt = ' ')
+
+        for i in range(len(stemlines)):
+            if self._actual[i].link is None:
+                plt.setp(stemlines[i], color = 'black', alpha = 0.4)
+                #plt.setp(markerlines[i], 'Visible', False)
+            else:
+                plt.setp(stemlines[i], 'color', 'blue')
+
+        #plot theoretical envelope
+        def _addTheorMarkers(ax, filter):
+            markerlines, _, _ = ax.stem([x.point.mz for i, x in enumerate(self._theoretical) if filter(i)],
+                                        [x.point.int for i, x in enumerate(self._theoretical) if filter(i)],
+                                        basefmt=' ', linefmt=' ', markerfmt='D')
+            markerlines.set_ydata(np.zeros(len(self._theoretical)))
+            return markerlines
+
+        if self._mono_index is not None:
+            markerlines = _addTheorMarkers(ax1, lambda x: True)
+            plt.setp(markerlines, mfc = 'white', mec = 'blue')
+            markerlines = _addTheorMarkers(ax1, lambda x: x == self._mono_index)
+            plt.setp(markerlines, mfc='blue', mec='blue')
+        else:
+            markerlines = _addTheorMarkers(ax1, lambda i: True)
+            plt.setp(markerlines, mfc='blue', mec='blue')
+
+        ax1.plot([x.point.mz for x in self._theoretical],
+                 [x.point.int for x in self._theoretical],
+                 'o--g', alpha = 0.6)
+
+        #for i in range(len(stemlines)):
+
+                 #use_line_collection = True)
+        for spine in ['top', 'right']:
+            ax1.spines[spine].set_visible(False)
+
+        plt.show()
+
+
+
+
 
 

@@ -1,4 +1,5 @@
 
+import pdb
 import numpy as np
 from typing import Dict, Tuple, List
 
@@ -43,7 +44,7 @@ class Ms1File(object):
                                  spec['m/z array'] >= mz_range[0],
                                  spec['m/z array'] <= mz_range[1]))
 
-        return {v: spec[selection] for k, v in vals.items()}
+        return {v: spec[k][selection] for k, v in vals.items()}
 
 
 
