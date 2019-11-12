@@ -1,5 +1,6 @@
 
 import sys
+import pdb
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -27,23 +28,24 @@ def plotEnv(ax, env):
     return ax
 
 
-#def
-
-
 def main():
     args = src.parseArgs()
 
     #done once
     pepStats = read_pep_stats('/Volumes/Data/msData/ms2_anotator/citFinder/rorpad_mouse/peptide_cit_stats.tsv')
     #pepStats = pepStats[pepStats['precursor_scan'] == 8468]
+    #pepStats = pepStats[pepStats['precursor_scan'] == 5540]
 
     #done once
+    table_keys = ['Citurlline', 'Arginine']
     cit_tableFname = '/Users/Aaron/local/envFinder/db/atom_tables/cit_diff_mod_atoms.txt'
     arg_tableFname = '/Users/Aaron/local/envFinder/db/atom_tables/default_residue_atoms.txt'
-    cit_atomTable = src.AtomTable(cit_tableFname)
-    arg_atomTable = src.AtomTable(arg_tableFname)
-    if not cit_atomTable.read() or not arg_atomTable.read():
-        exit()
+    atomTables = dict()
+    atomTables[table_keys[0]] = src.AtomTable(cit_tableFname)
+    atomTables[table_keys[1]] = src.AtomTable(arg_tableFname)
+    for v in atomTables.values():
+        if not v.read():
+            exit()
 
     #replace
     # baseDir = '/Volumes/Data/msData/envFinder/ms1/'
@@ -51,15 +53,25 @@ def main():
     # for fname in pepStats['precursor_file'].drop_duplicates().to_list():
     #     ms1Dict[fname] = ms1.read('{}/{}'.format(baseDir, fname), use_index=True)
 
-    ms1File = src.Ms1File('/Volumes/Data/msData/envFinder/ms1/ror_pad_short.ms1')
-    #ms1File = Ms1File.read('/Volumes/Data/msData/envFinder/ms1/ror_pad.ms1', use_index=True)
+    #ms1File = src.Ms1File('/Volumes/Data/msData/envFinder/ms1/ror_pad_short.ms1')
+    ms1File = src.Ms1File('/Volumes/Data/msData/envFinder/ms1/ror_pad.ms1')
 
     nRow = len(pepStats.index)
     for i, row in pepStats.iterrows():
         #print('Working on {} of {}'.format(i, nRow))
 
-        cit_composition = cit_atomTable.getComposition(row['sequence'], row['charge'])
-        env = src.getEnvelope(cit_composition)
+        #get cit and arg envelopes
+        mono_mzs = dict()
+        envs = dict()
+        for k, v in atomTables.items():
+            comp_temp = v.getComposition(row['sequence'], row['charge'])
+            envs[k] = src.getEnvelope(comp_temp, threshold = 0.01)
+            mono_mass = v.getMass(row['sequence'])
+            charge = row['charge']
+            mono_mzs[k] = (mono_mass + charge) / charge
+
+        spec = ms1File.getSpectra(row['precursor_scan'],
+                                  (min(mono_mzs.values()) - 5, max(mono_mzs.values()) + 5))
 
         #spec = ms1File.getSpectra(row['precursor_scan'], Ms1File.getMzRange())
 
@@ -70,14 +82,42 @@ def main():
         #
         # cEnv.add(actualEnv)
 
-        print('{}\t{}'.format(row['sequence'], cit_atomTable.getMass(row['sequence'])))
+        charge = row['charge']
+        consensus = dict()
+        best_score = 0
+        best_index = None
+        min_mz = sys.float_info.max
+        max_mz = 0
+        for i, k in enumerate(table_keys):
+            env = [src.DataPoint(mz, i) for mz, i in envs[k]]
+            spec_temp = [src.DataPoint(mz, i) for mz, i in zip(spec['mz'], spec['int'])]
+
+            consensus[k] = src.ConsensusEnvelope(spec_temp, env, sequence = row['sequence'])
+            consensus[k].set_mono(mono_mz = mono_mzs[k])
+            consensus[k].annotate(remove_unlabeled=False)
+
+            if consensus[k].envScore > best_score:
+                best_score = consensus[k].envScore
+                best_index = i
+            min_mz = min(min_mz, envs[k][0][0])
+            max_mz = max(max_mz, envs[k][-1][0])
+
+        fig, ax = plt.subplots(len(table_keys), 1, sharex = True)
+        for i, k in enumerate(table_keys):
+            consensus[k].plotEnv(ax[i], isBest = (i == best_index))
+
+        plt.xlabel('m/z')
+        mult = args.mz_step_margin
+        plt.xlim(min_mz - (mult / charge) * mult, max_mz + (mult / charge) * mult)
+        #plt.show()
+        print('{}\t{}'.format(row['sequence'], atomTables[table_keys[0]].getMass(row['sequence'])))
 
         #fig, (ax1, ax2) = plt.subplots(2, 1, sharex = True)
         #ax1 = plotEnv(ax1, env)
         #ax2 = plotEnv(ax2, actualEnv)
 
-        #plt.savefig('/Users/Aaron/local/envFinder/testFiles/test_env_{}.pdf'.format(row['scan']))
-        #plt.close('all')
+        plt.savefig('/Users/Aaron/local/envFinder/testFiles/env_test/test_env_{}.pdf'.format(row['precursor_scan']))
+        plt.close('all')
 
 
 

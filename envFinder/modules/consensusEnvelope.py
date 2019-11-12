@@ -83,14 +83,18 @@ class ConsensusEnvelope(object):
     #    for i in
 
     def __init__(self, actual: List[DataPoint] = None, theoretical: List[Isotope] = None,
-                 tolerance: float = 50, toleranceType:str = 'ppm', best_match_tie = 'intensity'):
+                 tolerance: float = 50, toleranceType:str = 'ppm',
+                 best_match_tie:str = 'intensity', envScoreCuttoff:float = 0.8,
+                 sequence: str = None):
         self.getTolerance = _getTolerance(toleranceType, tolerance)
         self._actual : List = actual
         self._theoretical : List = theoretical
-        self.initialized = False
         self._mono_mz = None
         self._mono_index = None
         self._best_match_tie = best_match_tie
+        self.initialized = False
+        self.envScoreCuttoff = envScoreCuttoff
+        self.sequence = sequence
 
 
     def setActual(self, actual: list):
@@ -136,6 +140,16 @@ class ConsensusEnvelope(object):
 
     def annotate(self, remove_unlabeled: bool = False, normalize = True):
 
+        '''
+        Annotate actual spectra with theoretical envelope.
+
+        :param remove_unlabeled: Should unlabeled points in actual spectra be removed?
+        :type remove_unlabeled: bool
+        :param normalize: Should both theoretical and actual intensities be normalized to 1?
+        :type normalize: bool
+        :return:
+        '''
+
         self._clearLinks(self._theoretical)
         self._clearLinks(self._actual)
 
@@ -146,8 +160,10 @@ class ConsensusEnvelope(object):
                                 arrKey = lambda x: x.point.mz)
 
             range_list = list()
-            best_i = 0
+            #best_i = 0
             for j in range(low_i, len(self._actual), 1):
+                if self._actual[j].point.mz > peak.point.mz + self.getTolerance(peak.point.mz):
+                    break
                 if inRange(self._actual[j].point.mz, peak.point.mz, self.getTolerance(self._actual[j].point.mz)):
                     range_list.append(j)
 
@@ -199,17 +215,24 @@ class ConsensusEnvelope(object):
         self.envScore = cor[0,1]
 
 
-    def plotEnv(self, fname:str):
-        fig, ax1 = plt.subplots()
+    def plotEnv(self, ax, title: str = None, isBest:bool = False):
 
         #general properties of plot
-        plt.margins(y = 0)
-        plt.ylim(0, 1.1)
-        plt.xlabel('m/z')
-        plt.ylabel('Relative intensity')
+        ax.margins(y = 0)
+        ax.set_ylim(0, 1.1)
+        ax.set_ylabel('Relative intensity')
+
+        _title = None
+        if title is None:
+            if self.sequence is not None:
+                _title = '{}, r = {:.2f}'.format(self.sequence, self.envScore)
+        else:
+            _title = title
+        if _title is not None:
+            ax.set_title(_title, {'fontweight': 'bold' if isBest else plt.rcParams['axes.titleweight']}, 'center')
 
         #plot actual spectra
-        _, stemlines, _ = ax1.stem([x.point.mz for x in self._actual],
+        _, stemlines, _ = ax.stem([x.point.mz for x in self._actual],
                                    [x.point.int for x in self._actual],
                                    basefmt = ' ', markerfmt = ' ')
 
@@ -221,33 +244,26 @@ class ConsensusEnvelope(object):
                 plt.setp(stemlines[i], 'color', 'blue')
 
         #plot theoretical envelope
-        def _addTheorMarkers(ax, filter):
-            markerlines, _, _ = ax.stem([x.point.mz for i, x in enumerate(self._theoretical) if filter(i)],
-                                        [x.point.int for i, x in enumerate(self._theoretical) if filter(i)],
-                                        basefmt=' ', linefmt=' ', markerfmt='D')
-            markerlines.set_ydata(np.zeros(len(self._theoretical)))
-            return markerlines
+        for i, it in enumerate(self._theoretical):
+            fill = 'white'
+            if self._mono_index is not None:
+                if i == self._mono_index:
+                    fill = 'green' if it.link is not None else 'red'
 
-        if self._mono_index is not None:
-            markerlines = _addTheorMarkers(ax1, lambda x: True)
-            plt.setp(markerlines, mfc = 'white', mec = 'blue')
-            markerlines = _addTheorMarkers(ax1, lambda x: x == self._mono_index)
-            plt.setp(markerlines, mfc='blue', mec='blue')
-        else:
-            markerlines = _addTheorMarkers(ax1, lambda i: True)
-            plt.setp(markerlines, mfc='blue', mec='blue')
+            outline = 'green' if it.link is not None else 'red'
 
-        ax1.plot([x.point.mz for x in self._theoretical],
-                 [x.point.int for x in self._theoretical],
-                 'o--g', alpha = 0.6)
+            markerlines, _, _ = ax.stem([it.point.mz], [0], basefmt=' ', linefmt=' ', markerfmt='D')
+            plt.setp(markerlines, mfc = fill, mec = outline)
 
-        #for i in range(len(stemlines)):
 
-                 #use_line_collection = True)
+        ax.plot([x.point.mz for x in self._theoretical],
+                [x.point.int for x in self._theoretical],
+                'o--{}'.format('g' if self.envScore > self.envScoreCuttoff else 'r'),
+                alpha = 0.6)
+
         for spine in ['top', 'right']:
-            ax1.spines[spine].set_visible(False)
+            ax.spines[spine].set_visible(False)
 
-        plt.show()
 
 
 

@@ -64,7 +64,6 @@ class AtomTable:
         if not self.fname:
             sys.stderr.write('fname is required!\n')
             return False
-
         try:
             self._read()
         except (IOError, RuntimeError) as e:
