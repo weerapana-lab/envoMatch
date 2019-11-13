@@ -3,7 +3,6 @@ from typing import List
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
-from math import isclose
 
 from .utils import lower_bound, inRange
 
@@ -139,7 +138,6 @@ class ConsensusEnvelope(object):
 
 
     def annotate(self, remove_unlabeled: bool = False, normalize = True):
-
         '''
         Annotate actual spectra with theoretical envelope.
 

@@ -34,18 +34,22 @@ def main():
     #done once
     pepStats = read_pep_stats('/Volumes/Data/msData/ms2_anotator/citFinder/rorpad_mouse/peptide_cit_stats.tsv')
     #pepStats = pepStats[pepStats['precursor_scan'] == 8468]
-    #pepStats = pepStats[pepStats['precursor_scan'] == 5540]
+    pepStats = pepStats[pepStats['precursor_scan'] == 3988]
 
     #done once
-    table_keys = ['Citurlline', 'Arginine']
-    cit_tableFname = '/Users/Aaron/local/envFinder/db/atom_tables/cit_diff_mod_atoms.txt'
-    arg_tableFname = '/Users/Aaron/local/envFinder/db/atom_tables/default_residue_atoms.txt'
-    atomTables = dict()
-    atomTables[table_keys[0]] = src.AtomTable(cit_tableFname)
-    atomTables[table_keys[1]] = src.AtomTable(arg_tableFname)
-    for v in atomTables.values():
-        if not v.read():
-            exit()
+    #table_keys = ['Citurlline', 'Arginine']
+    #cit_tableFname = '/Users/Aaron/local/envFinder/db/atom_tables/cit_diff_mod_atoms.txt'
+    #arg_tableFname = '/Users/Aaron/local/envFinder/db/atom_tables/default_residue_atoms.txt'
+    #atomTables = dict()
+    #atomTables[table_keys[0]] = src.AtomTable(cit_tableFname)
+    #atomTables[table_keys[1]] = src.AtomTable(arg_tableFname)
+    #for v in atomTables.values():
+    #    if not v.read():
+    #        exit()
+
+    atomTable = src.AtomTable('/Users/Aaron/local/envFinder/db/atom_tables/cit_diff_mod_atoms.txt')
+    if not atomTable.read():
+        exit()
 
     #replace
     # baseDir = '/Volumes/Data/msData/envFinder/ms1/'
@@ -58,17 +62,20 @@ def main():
 
     nRow = len(pepStats.index)
     for i, row in pepStats.iterrows():
-        #print('Working on {} of {}'.format(i, nRow))
+        print('Working on {} of {}'.format(i, nRow))
 
         #get cit and arg envelopes
         mono_mzs = dict()
         envs = dict()
-        for k, v in atomTables.items():
-            comp_temp = v.getComposition(row['sequence'], row['charge'])
-            envs[k] = src.getEnvelope(comp_temp, threshold = 0.01)
-            mono_mass = v.getMass(row['sequence'])
+        charge = row['charge']
+        sequence = row['sequence']
+        sequences = [sequence.replace('*', '', i) for i in range(0, sequence.count('*') + 1)]
+        for s in sequences:
+            comp_temp = atomTable.getComposition(s, row['charge'])
+            envs[s] = src.getEnvelope(comp_temp, threshold = 0.01)
+            mono_mass = atomTable.getMass(s)
             charge = row['charge']
-            mono_mzs[k] = (mono_mass + charge) / charge
+            mono_mzs[s] = (mono_mass + charge) / charge
 
         spec = ms1File.getSpectra(row['precursor_scan'],
                                   (min(mono_mzs.values()) - 5, max(mono_mzs.values()) + 5))
@@ -82,35 +89,35 @@ def main():
         #
         # cEnv.add(actualEnv)
 
-        charge = row['charge']
         consensus = dict()
         best_score = 0
         best_index = None
         min_mz = sys.float_info.max
         max_mz = 0
-        for i, k in enumerate(table_keys):
-            env = [src.DataPoint(mz, i) for mz, i in envs[k]]
+        for i, s in enumerate(sequences):
+            env = [src.DataPoint(mz, i) for mz, i in envs[s]]
             spec_temp = [src.DataPoint(mz, i) for mz, i in zip(spec['mz'], spec['int'])]
 
-            consensus[k] = src.ConsensusEnvelope(spec_temp, env, sequence = row['sequence'])
-            consensus[k].set_mono(mono_mz = mono_mzs[k])
-            consensus[k].annotate(remove_unlabeled=False)
+            consensus[s] = src.ConsensusEnvelope(spec_temp, env, sequence = s)
+            consensus[s].set_mono(mono_mz = mono_mzs[s])
+            consensus[s].annotate(remove_unlabeled=False)
 
-            if consensus[k].envScore > best_score:
-                best_score = consensus[k].envScore
+            if consensus[s].envScore > best_score:
+                best_score = consensus[s].envScore
                 best_index = i
-            min_mz = min(min_mz, envs[k][0][0])
-            max_mz = max(max_mz, envs[k][-1][0])
+            min_mz = min(min_mz, envs[s][0][0])
+            max_mz = max(max_mz, envs[s][-1][0])
 
-        fig, ax = plt.subplots(len(table_keys), 1, sharex = True)
-        for i, k in enumerate(table_keys):
-            consensus[k].plotEnv(ax[i], isBest = (i == best_index))
+        fig, ax = plt.subplots(len(sequences), 1, sharex = True)
+        fig.set_size_inches(6.4, 2.4 * len(sequences))
+        for i, s in enumerate(sequences):
+            consensus[s].plotEnv(ax[i], isBest = (i == best_index))
 
         plt.xlabel('m/z')
         mult = args.mz_step_margin
         plt.xlim(min_mz - (mult / charge) * mult, max_mz + (mult / charge) * mult)
         #plt.show()
-        print('{}\t{}'.format(row['sequence'], atomTables[table_keys[0]].getMass(row['sequence'])))
+        #print('{}\t{}'.format(row['sequence'], atomTables[table_keys[0]].getMass(row['sequence'])))
 
         #fig, (ax1, ax2) = plt.subplots(2, 1, sharex = True)
         #ax1 = plotEnv(ax1, env)
