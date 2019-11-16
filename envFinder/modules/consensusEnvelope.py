@@ -208,8 +208,8 @@ class ConsensusEnvelope(object):
 
 
     def calcEnvScore(self):
-        cor = np.corrcoef(x = [x.point.int for x in self._actual],
-                          y = [x.link.point.int if x.link is not None else 0 for x in self._actual])
+        cor = np.corrcoef(x = [x.point.int for x in self._theoretical],
+                          y = [x.link.point.int if x.link is not None else 0 for x in self._theoretical])
         self.envScore = cor[0,1]
 
 
