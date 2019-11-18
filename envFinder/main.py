@@ -1,15 +1,15 @@
 
 import sys
-import pdb
+import os
 
 import matplotlib.pyplot as plt
 import pandas as pd
 
 import modules as src
 
-def read_pep_stats(fnane):
-    cols = ['sequence', 'parent_mz', 'charge', 'scan', 'precursor_scan', 'parent_file']
-    pepStats = pd.read_csv(fnane, sep='\t')
+def read_pep_stats(fname):
+    cols = ['sequence', 'parent_mz', 'charge', 'scan', 'precursor_scan', 'parent_file', 'sample_name']
+    pepStats = pd.read_csv(fname, sep='\t')
     pepStats = pepStats[pepStats['is_modified'].apply(bool)]
     pepStats = pepStats[cols].drop_duplicates()
     pepStats.reset_index(inplace = True)
@@ -17,48 +17,51 @@ def read_pep_stats(fnane):
     return(pepStats)
 
 
-def plotEnv(ax, env):
-    ax.stem([x[0] for x in env], [x[1] for x in env], markerfmt=' ')
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    for x, y in env:
-        if y > 0.01:
-            ax.annotate('{}'.format(round(x, 4)), xy=(x, y))
+def make_of_seq(seq:str, mod_str = '*') -> str:
+    if seq[0] in mod_str:
+        raise RuntimeError('{} is an invalid sequence!'.format(seq))
 
-    return ax
+    ret = str()
+    for s in seq:
+        if s in mod_str:
+            ret = ret[:len(ret) - 1] + ret[-1].lower()
+        else: ret += s
+    return ret
 
 
 def main():
     args = src.parseArgs()
 
     #done once
-    pepStats = read_pep_stats('/Volumes/Data/msData/ms2_anotator/citFinder/rorpad_mouse/peptide_cit_stats.tsv')
-    #pepStats = pepStats[pepStats['precursor_scan'] == 8468]
-    pepStats = pepStats[pepStats['precursor_scan'] == 3988]
+    pepStats = read_pep_stats(args.ionFinder_output)
+    pepStats = pepStats[pepStats['precursor_scan'] == 8468]
+    #pepStats = pepStats[pepStats['precursor_scan'] == 3988]
 
-    #done once
-    #table_keys = ['Citurlline', 'Arginine']
-    #cit_tableFname = '/Users/Aaron/local/envFinder/db/atom_tables/cit_diff_mod_atoms.txt'
-    #arg_tableFname = '/Users/Aaron/local/envFinder/db/atom_tables/default_residue_atoms.txt'
-    #atomTables = dict()
-    #atomTables[table_keys[0]] = src.AtomTable(cit_tableFname)
-    #atomTables[table_keys[1]] = src.AtomTable(arg_tableFname)
-    #for v in atomTables.values():
-    #    if not v.read():
-    #        exit()
-
-    atomTable = src.AtomTable('/Users/Aaron/local/envFinder/db/atom_tables/cit_diff_mod_atoms.txt')
+    atomTable = src.AtomTable(args.atom_table)
     if not atomTable.read():
         exit()
 
-    #replace
-    # baseDir = '/Volumes/Data/msData/envFinder/ms1/'
-    # ms1Dict = dict()
-    # for fname in pepStats['precursor_file'].drop_duplicates().to_list():
-    #     ms1Dict[fname] = ms1.read('{}/{}'.format(baseDir, fname), use_index=True)
+    ms1Files = dict()
+    ms1_prefix = [os.path.dirname(os.path.abspath(args.ionFinder_output))] + args.ms1_prefix
+    for f in pepStats['parent_file'].unique():
+        canidate_paths = ['{}/{}.{}'.format(x, os.path.splitext(f)[0], args.file_type) for x in ms1_prefix]
+        path_temp = None
+        for c in canidate_paths:
+            if os.path.isfile(c):
+                sys.stdout.write('Found {}!\n\tReading {}'.format(f, c))
+                path_temp = c
+                break
 
-    #ms1File = src.Ms1File('/Volumes/Data/msData/envFinder/ms1/ror_pad_short.ms1')
-    ms1File = src.Ms1File('/Volumes/Data/msData/envFinder/ms1/ror_pad.ms1')
+        if path_temp is None:
+            raise RuntimeError('Could not find parent ms1 file for {}!'.format(f))
+        else:
+            ms1Files[f] = src.Ms1File(path_temp, file_type=args.file_type)
+            sys.stdout.write('\n\tDone\n')
+
+    if args.plotEnv:
+        path_temp = '{}/envelopes'.format(os.getcwd())
+        if not os.path.isdir(path_temp):
+            os.mkdir()
 
     nRow = len(pepStats.index)
     for i, row in pepStats.iterrows():
@@ -77,17 +80,8 @@ def main():
             charge = row['charge']
             mono_mzs[s] = (mono_mass + charge) / charge
 
-        spec = ms1File.getSpectra(row['precursor_scan'],
-                                  (min(mono_mzs.values()) - 5, max(mono_mzs.values()) + 5))
-
-        #spec = ms1File.getSpectra(row['precursor_scan'], Ms1File.getMzRange())
-
-        #actualEnv = src.ms1.findEnvelope(env, spec)
-
-        # cEnv = consensusEnvelope.ConsensusEnvelope()
-        # cEnv.initalize(env, 'cit')
-        #
-        # cEnv.add(actualEnv)
+        spec = ms1Files[row['parent_file']].getSpectra(row['precursor_scan'],
+                                                       (min(mono_mzs.values()) - 5, max(mono_mzs.values()) + 5))
 
         consensus = dict()
         best_score = 0
@@ -108,24 +102,25 @@ def main():
             min_mz = min(min_mz, envs[s][0][0])
             max_mz = max(max_mz, envs[s][-1][0])
 
-        fig, ax = plt.subplots(len(sequences), 1, sharex = True)
-        fig.set_size_inches(6.4, 2.4 * len(sequences))
-        for i, s in enumerate(sequences):
-            consensus[s].plotEnv(ax[i], isBest = (i == best_index))
 
-        plt.xlabel('m/z')
-        mult = args.mz_step_margin
-        plt.xlim(min_mz - (mult / charge) * mult, max_mz + (mult / charge) * mult)
-        #plt.show()
-        #print('{}\t{}'.format(row['sequence'], atomTables[table_keys[0]].getMass(row['sequence'])))
+        if args.plotEnv:
 
-        #fig, (ax1, ax2) = plt.subplots(2, 1, sharex = True)
-        #ax1 = plotEnv(ax1, env)
-        #ax2 = plotEnv(ax2, actualEnv)
+            fig, ax = plt.subplots(len(sequences), 1, sharex=True)
+            fig.set_size_inches(6.4, 2.4 * len(sequences))
+            for i, s in enumerate(sequences):
+                consensus[s].plotEnv(ax[i], isBest=(i == best_index))
 
-        plt.savefig('/Users/Aaron/local/envFinder/testFiles/env_test/test_env_{}.pdf'.format(row['precursor_scan']))
-        plt.close('all')
+            plt.xlabel('m/z')
+            mult = args.mz_step_margin
+            plt.xlim(min_mz - (mult / charge) * mult, max_mz + (mult / charge) * mult)
 
+            ofname = '{}/envelopes/{}_{}_{}_{}.pdf'.format(os.getcwd(),
+                                                           row['sample_name'],
+                                                           make_of_seq(row['sequence']),
+                                                           row['scan'],
+                                                           row['charge'])
+            plt.savefig(ofname)
+            plt.close('all')
 
 
 if __name__ == "__main__":
