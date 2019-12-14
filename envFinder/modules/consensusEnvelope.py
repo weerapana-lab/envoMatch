@@ -9,8 +9,8 @@ from .utils import lower_bound, inRange
 class Isotope(object):
     __slots__ = ['mz', 'int']
 
-    def __init__(self, mz: float = 0,
-                 intensity: float = 0):
+    def __init__(self, mz = 0,
+                 intensity = 0):
         self.mz = mz
         self.int = intensity
 
@@ -51,7 +51,7 @@ class DataPoint(object):
             out.write('\n')
 
 
-def _getTolerance(toleranceType: str, _range: float):
+def _getTolerance(toleranceType, _range):
     '''
     Get function to return m/z +- tolerance.
 
@@ -73,7 +73,7 @@ def _getTolerance(toleranceType: str, _range: float):
 class ConsensusEnvelope(object):
 
     @staticmethod
-    def _clearLinks(lst: List):
+    def _clearLinks(lst):
         for i, _ in enumerate(lst):
             lst[i].link = None
 
@@ -81,13 +81,13 @@ class ConsensusEnvelope(object):
     #def _iterate(iterable):
     #    for i in
 
-    def __init__(self, actual: List[DataPoint] = None, theoretical: List[Isotope] = None,
-                 tolerance: float = 50, toleranceType:str = 'ppm',
-                 best_match_tie:str = 'intensity', envScoreCuttoff:float = 0.8,
-                 sequence: str = None):
+    def __init__(self, actual = None, theoretical = None,
+                 tolerance = 50, toleranceType = 'ppm',
+                 best_match_tie = 'intensity', envScoreCuttoff = 0.8,
+                 sequence = None):
         self.getTolerance = _getTolerance(toleranceType, tolerance)
-        self._actual : List = actual
-        self._theoretical : List = theoretical
+        self._actual = actual
+        self._theoretical = theoretical
         self._mono_mz = None
         self._mono_index = None
         self._best_match_tie = best_match_tie
@@ -96,20 +96,20 @@ class ConsensusEnvelope(object):
         self.sequence = sequence
 
 
-    def setActual(self, actual: list):
+    def setActual(self, actual):
         self._clearLinks(self._theoretical)
         self.initialized = False
         self._actual = actual
 
 
-    def setTheoretical(self, theoretical: List):
+    def setTheoretical(self, theoretical):
         self._clearLinks(self._actual)
         self.initialized = False
         self._theoretical = theoretical
 
 
-    def set_mono(self, mono_mz: float = None,
-                 mono_mass: float = None, charge: int = None):
+    def set_mono(self, mono_mz = None,
+                 mono_mass = None, charge = None):
 
         if mono_mz is not None:
             self._mono_mz = mono_mz
@@ -137,7 +137,7 @@ class ConsensusEnvelope(object):
         return enumerate(self._theoretical)
 
 
-    def annotate(self, remove_unlabeled: bool = False, normalize = True):
+    def annotate(self, remove_unlabeled, normalize = True):
         '''
         Annotate actual spectra with theoretical envelope.
 
@@ -213,7 +213,7 @@ class ConsensusEnvelope(object):
         self.envScore = cor[0,1]
 
 
-    def plotEnv(self, ax, title: str = None, isBest:bool = False):
+    def plotEnv(self, ax, title = None, isBest = False):
 
         #general properties of plot
         ax.margins(y = 0)

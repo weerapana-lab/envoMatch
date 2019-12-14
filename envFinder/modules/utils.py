@@ -1,6 +1,6 @@
 
 
-def inRange(value, compare, range) -> bool:
+def inRange(value, compare, range):
     '''
     Determine whether the difference between value and compare is <= range
     :param value: value
@@ -16,7 +16,7 @@ def inRange(value, compare, range) -> bool:
 
 def _numericalCompare(lhs, rhs,
                       lkey = lambda x: x,
-                      rkey = lambda x: x) -> int:
+                      rkey = lambda x: x):
     if lkey(lhs) < rkey(rhs):
         return -1
     elif lkey(lhs) > rkey(rhs):
@@ -28,7 +28,7 @@ def _numericalCompare(lhs, rhs,
 def lower_bound(array, value,
                 arrKey = lambda x: x,
                 valueKey = lambda x: x,
-                comp = _numericalCompare) -> int:
+                comp = _numericalCompare):
     '''
     Return the value i such that all e in array[:i] have e < value
     and all e in array[i:] have e >= value.
@@ -42,8 +42,8 @@ def lower_bound(array, value,
     :type int:
     '''
 
-    lo: int = 0
-    hi: int = len(array) - 1
+    lo = 0
+    hi = len(array) - 1
 
     while lo < hi:
         mid = (lo+hi)//2
@@ -62,7 +62,7 @@ def lower_bound(array, value,
 def find_nearest_index(array, value,
                        arrKey = lambda x: x,
                        valueKey = lambda x: x,
-                       comp = _numericalCompare) -> int:
+                       comp = _numericalCompare):
     '''
     Get the index of the closest value to value in array.
 
@@ -80,8 +80,8 @@ def find_nearest_index(array, value,
     if comp(value, array[-1], valueKey, arrKey) == 1:
         return len(array) - 1
 
-    lo : int = 0
-    hi : int = len(array) - 1
+    lo  = 0
+    hi = len(array) - 1
 
     while lo <= hi:
         mid: int = int((hi + lo) / 2)
@@ -100,7 +100,7 @@ def find_nearest_index(array, value,
                  (valueKey(value) - arrKey(array[hi])) else hi
 
 
-def getRank(lst: list, lstKey = lambda x: x) -> list:
+def getRank(lst, lstKey = lambda x: x):
     '''
     Get a list of values in lst ranked by lstKey.
 

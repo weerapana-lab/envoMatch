@@ -1,6 +1,4 @@
 
-from typing import Dict, Tuple, List
-
 from pyteomics import ms1, mzml, mzxml
 
 _MZ_KEY = 'mz'
@@ -9,11 +7,11 @@ _INT_KEY = 'int'
 class Ms1File(object):
 
     @staticmethod
-    def getMzRange(mono_mz: float, charge: int, range : int = 10) -> Tuple:
+    def getMzRange(mono_mz, charge, range = 10):
        return ((mono_mz - range) / charge, (mono_mz + range) / charge)
 
     @staticmethod
-    def getReadFxn(type:str):
+    def getReadFxn(type):
         if type == 'ms1':
             return ms1.read
         elif type == 'mzXML':
@@ -29,17 +27,17 @@ class Ms1File(object):
         else:
             return str(id)
 
-    def __init__(self, fname: str = None, file_type:str = 'mzXML'):
+    def __init__(self, fname = None, file_type = 'mzXML'):
         if fname is None:
             self.fname = str()
         else: self.read(fname, file_type)
 
-    def read(self, fname: str, file_type: str = 'mzXML'):
+    def read(self, fname, file_type = 'mzXML'):
         self.fname = fname
         _read = Ms1File.getReadFxn(file_type)
         self.dat = _read(self.fname, use_index = True)
 
-    def getSpectra(self, scan: int, mz_range : Tuple) -> Dict:
+    def getSpectra(self, scan, mz_range):
         '''
         Return spectra at scan in the mz_range
 
