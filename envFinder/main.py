@@ -17,7 +17,7 @@ def read_pep_stats(fname):
     return(pepStats)
 
 
-def make_of_seq(seq:str, mod_str = '*') -> str:
+def make_of_seq(seq, mod_str = '*'):
     if seq[0] in mod_str:
         raise RuntimeError('{} is an invalid sequence!'.format(seq))
 
@@ -34,14 +34,14 @@ def main():
 
     #done once
     pepStats = read_pep_stats(args.ionFinder_output)
-    pepStats = pepStats[pepStats['precursor_scan'] == 8468]
+    #pepStats = pepStats[pepStats['precursor_scan'] == 8468]
     #pepStats = pepStats[pepStats['precursor_scan'] == 3988]
 
-    atomTable = src.AtomTable(args.atom_table)
-    if not atomTable.read():
+    atom_table = src.AtomTable(args.atom_table)
+    if not atom_table.read():
         exit()
 
-    ms1Files = dict()
+    ms1_files = dict()
     ms1_prefix = [os.path.dirname(os.path.abspath(args.ionFinder_output))] + args.ms1_prefix
     for f in pepStats['parent_file'].unique():
         canidate_paths = ['{}/{}.{}'.format(x, os.path.splitext(f)[0], args.file_type) for x in ms1_prefix]
@@ -55,7 +55,7 @@ def main():
         if path_temp is None:
             raise RuntimeError('Could not find parent ms1 file for {}!'.format(f))
         else:
-            ms1Files[f] = src.Ms1File(path_temp, file_type=args.file_type)
+            ms1_files[f] = src.Ms1File(path_temp, file_type=args.file_type)
             sys.stdout.write('\n\tDone\n')
 
     if args.plotEnv:
@@ -74,13 +74,13 @@ def main():
         sequence = row['sequence']
         sequences = [sequence.replace('*', '', i) for i in range(0, sequence.count('*') + 1)]
         for s in sequences:
-            comp_temp = atomTable.getComposition(s, row['charge'])
+            comp_temp = atom_table.getComposition(s, row['charge'])
             envs[s] = src.getEnvelope(comp_temp, threshold = 0.01)
-            mono_mass = atomTable.getMass(s)
+            mono_mass = atom_table.getMass(s)
             charge = row['charge']
             mono_mzs[s] = (mono_mass + charge) / charge
 
-        spec = ms1Files[row['parent_file']].getSpectra(row['precursor_scan'],
+        spec = ms1_files[row['parent_file']].getSpectra(row['precursor_scan'],
                                                        (min(mono_mzs.values()) - 5, max(mono_mzs.values()) + 5))
 
         consensus = dict()
