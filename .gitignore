@@ -3,6 +3,7 @@
 .idea/*
 testFiles/*
 test/*
+bin/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
