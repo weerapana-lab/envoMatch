@@ -36,6 +36,11 @@ def parseArgs():
     args = parser.parse_args()
 
     #check ms1 prefix list
+    if args.ms1_prefix is None:
+        args.ms1_prefix = [os.path.dirname(os.path.abspath(args.ionFinder_output))]
+    else:
+        args.ms1_prefix.insert(0, os.path.dirname(os.path.abspath(args.ionFinder_output)))
+
     for p in args.ms1_prefix:
         if not os.path.isdir(p):
             raise RuntimeError('{} is not a directory!'.format(p))
