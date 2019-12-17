@@ -3,6 +3,7 @@ from typing import List
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+import warnings
 
 from .utils import lower_bound, inRange
 
@@ -231,9 +232,12 @@ class ConsensusEnvelope(object):
                 {'fontweight' : plt.rcParams['axes.titleweight']}, 'center')
 
         #plot actual spectra
-        _, stemlines, _ = ax.stem([x.point.mz for x in self._actual],
-                                   [x.point.int for x in self._actual],
-                                   basefmt = ' ', markerfmt = ' ')
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            _, stemlines, _ = ax.stem([x.point.mz for x in self._actual],
+                                       [x.point.int for x in self._actual],
+                                       basefmt = ' ', markerfmt = ' ',
+                                       use_line_collection = False)
 
         for i in range(len(stemlines)):
             if self._actual[i].link is None:
@@ -251,7 +255,11 @@ class ConsensusEnvelope(object):
 
             outline = 'green' if it.link is not None else 'red'
 
-            markerlines, _, _ = ax.stem([it.point.mz], [0], basefmt=' ', linefmt=' ', markerfmt='D')
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                markerlines, _, _ = ax.stem([it.point.mz], [0], basefmt=' ',
+                                            linefmt=' ', markerfmt='D',
+                                            use_line_collection = False)
             plt.setp(markerlines, mfc = fill, mec = outline)
 
 
