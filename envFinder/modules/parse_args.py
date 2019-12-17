@@ -2,8 +2,8 @@
 import argparse
 import os
 
-ATOM_TABLE_PATH = os.path.abspath('../db/atom_tables/cit_diff_mod_atoms.txt')
 
+ATOM_TABLE_PATH = os.path.abspath('{}/../../db/atom_tables/cit_diff_mod_atoms.txt'.format(os.path.dirname(os.path.abspath(__file__))))
 
 def parseArgs():
     parser = argparse.ArgumentParser(prog='envFinder')
@@ -29,8 +29,12 @@ def parseArgs():
     parser.add_argument('--plotEnv', action = 'store_true', default = False,
                         help = 'Should plot of envelopes be saved?')
 
+    parser.add_argument('--overwrite', type = int, choices = [0,1], default = 1,
+            help = 'Should ionFinder_output be overwritten?')
+
     parser.add_argument('ionFinder_output', type = str,
                         help='ionFinder output file to read.')
+    
 
 
     args = parser.parse_args()

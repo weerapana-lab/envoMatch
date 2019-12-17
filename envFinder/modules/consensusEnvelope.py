@@ -227,7 +227,8 @@ class ConsensusEnvelope(object):
         else:
             _title = title
         if _title is not None:
-            ax.set_title(_title, {'fontweight': 'bold' if isBest else plt.rcParams['axes.titleweight']}, 'center')
+            ax.set_title(_title, {'fontweight': 'bold', 'color':'green' } if isBest else
+                {'fontweight' : plt.rcParams['axes.titleweight']}, 'center')
 
         #plot actual spectra
         _, stemlines, _ = ax.stem([x.point.mz for x in self._actual],

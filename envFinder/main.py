@@ -8,13 +8,20 @@ import pandas as pd
 import modules as src
 
 def read_pep_stats(fname):
-    cols = ['sequence', 'parent_mz', 'charge', 'scan', 'precursor_scan', 'parent_file', 'sample_name']
+    #cols = ['sequence', 'parent_mz', 'charge', 'scan', 'precursor_scan', 'parent_file', 'sample_name']
     pepStats = pd.read_csv(fname, sep='\t')
     pepStats = pepStats[pepStats['is_modified'].apply(bool)]
-    pepStats = pepStats[cols].drop_duplicates()
+    #pepStats = pepStats[cols].drop_duplicates()
     pepStats.reset_index(inplace = True)
-    pepStats['precursor_file'] = pepStats['parent_file'].apply(lambda x: x.replace('.ms2', '.ms1'))
+    # pepStats['precursor_file'] = pepStats['parent_file'].apply(lambda x: x.replace('.ms2', '.ms1'))
     return(pepStats)
+
+
+def write_pep_stats(dat, ifname, overwrite = False):
+    s = os.path.splitext(ifname)
+    base = '{}{}{}'.format(s[0], '_env' if not overwrite else '', s[1])
+    sys.stdout.write('Writing {}'.format(base))
+    dat.to_csv(base, sep = '\t', index = False)
 
 
 def make_of_seq(seq, mod_str = '*'):
@@ -34,6 +41,7 @@ def main():
 
     #done once
     pepStats = read_pep_stats(args.ionFinder_output)
+    pepStats['good_envelope'] = False
     #pepStats = pepStats[pepStats['precursor_scan'] == 8468]
     #pepStats = pepStats[pepStats['precursor_scan'] == 3988]
 
@@ -61,11 +69,12 @@ def main():
     if args.plotEnv:
         path_temp = '{}/envelopes'.format(os.getcwd())
         if not os.path.isdir(path_temp):
-            os.mkdir()
+            os.mkdir(path_temp)
 
+    sys.stdout.write('Searching for envelopes...\n')
     nRow = len(pepStats.index)
     for i, row in pepStats.iterrows():
-        print('Working on {} of {}'.format(i, nRow))
+        sys.stdout.write('\tWorking on {} of {}\r'.format(i, nRow))
 
         #get cit and arg envelopes
         mono_mzs = dict()
@@ -88,9 +97,9 @@ def main():
         best_index = None
         min_mz = sys.float_info.max
         max_mz = 0
-        for i, s in enumerate(sequences):
-            env = [src.DataPoint(mz, i) for mz, i in envs[s]]
-            spec_temp = [src.DataPoint(mz, i) for mz, i in zip(spec['mz'], spec['int'])]
+        for j, s in enumerate(sequences):
+            env = [src.DataPoint(mz, k) for mz, k in envs[s]]
+            spec_temp = [src.DataPoint(mz, k) for mz, k in zip(spec['mz'], spec['int'])]
 
             consensus[s] = src.ConsensusEnvelope(spec_temp, env, sequence = s)
             consensus[s].set_mono(mono_mz = mono_mzs[s])
@@ -98,10 +107,15 @@ def main():
 
             if consensus[s].envScore > best_score:
                 best_score = consensus[s].envScore
-                best_index = i
+                best_index = j
             min_mz = min(min_mz, envs[s][0][0])
             max_mz = max(max_mz, envs[s][-1][0])
 
+        goodEnvTemp = False
+        if best_index is not None:
+            goodEnvTemp = sequences[best_index] == sequence and best_score >= args.env_co
+        #row['good_envelope'] = goodEnvTemp
+        pepStats.at[i, 'good_envelope'] = goodEnvTemp
 
         if args.plotEnv:
 
@@ -121,6 +135,9 @@ def main():
                                                            row['charge'])
             plt.savefig(ofname)
             plt.close('all')
+
+    sys.stdout.write('\nDone!\n')
+    write_pep_stats(pepStats, args.ionFinder_output, overwrite = args.overwrite)
 
 
 if __name__ == "__main__":
