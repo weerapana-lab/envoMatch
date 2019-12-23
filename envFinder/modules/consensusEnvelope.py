@@ -194,15 +194,18 @@ class ConsensusEnvelope(object):
             try:
                 max_int = max([x.point.int for x in self._actual if x.link is not None])
             except ValueError:
-                sys.stdout.write('No points in envelope found!\n')
                 max_int = max(self._actual, key = lambda x: x.point.int).point.int
 
-            for i in range(len(self._actual)):
-                self._actual[i].point.int /= max_int
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                for i in range(len(self._actual)):
+                    self._actual[i].point.int /= max_int
 
             max_int = max(self._theoretical, key = lambda x: x.point.int).point.int
-            for i in range(len(self._theoretical)):
-                self._theoretical[i].point.int /= max_int
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                for i in range(len(self._theoretical)):
+                    self._theoretical[i].point.int /= max_int
 
         self.calcEnvScore()
         self.initialized = True
@@ -228,6 +231,7 @@ class ConsensusEnvelope(object):
         else:
             _title = title
         if _title is not None:
+            text_color = 'green' if self.envScore >= self.envScoreCuttoff else 'red'
             ax.set_title(_title, {'fontweight': 'bold', 'color':'green' } if isBest else
                 {'fontweight' : plt.rcParams['axes.titleweight']}, 'center')
 
