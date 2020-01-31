@@ -121,7 +121,6 @@ def main():
         goodEnvTemp = False
         if best_index is not None:
             goodEnvTemp = sequences[best_index] == sequence and best_score >= args.env_co
-        print('\tRow: {}, {} -> {}'.format(i, row['scan'], goodEnvTemp))
         pepStats.at[i, 'good_envelope'] = goodEnvTemp
 
         if args.plotEnv:
