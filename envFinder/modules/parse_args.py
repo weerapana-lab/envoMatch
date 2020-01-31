@@ -22,6 +22,9 @@ def parseArgs():
                                'By default only the current working directory is used. '
                                'Additional directories are searched in the order they are provided.')
 
+    parser.add_argument('-f', '--formula_source', choices=['input', 'calculate'], default='calculate',
+                        help='Where should peptide formulas come from? Default is calculate.')
+
     parser.add_argument('-a', '--atom_table', default = ATOM_TABLE_PATH,
                         help = 'Path to atom table to use in calculating envelopes. '
                                'Default is: {}'.format(ATOM_TABLE_PATH))
@@ -34,8 +37,6 @@ def parseArgs():
 
     parser.add_argument('ionFinder_output', type = str,
                         help='ionFinder output file to read.')
-    
-
 
     args = parser.parse_args()
 

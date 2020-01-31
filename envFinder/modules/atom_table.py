@@ -1,5 +1,6 @@
 
 import sys
+from typing import Dict
 from collections import Counter
 from sortedcontainers import SortedList
 
@@ -14,6 +15,7 @@ class AtomTable:
 
     _atom_masses = {"C": (12.011, 12),
                     "H": (1.008, 1.00783),
+                    "H+": (1.008, 1.00783),
                     "O": (15.999, 15.99491),
                     "N": (14.007, 14.00307),
                     "S": (32.06, 31.97207),
@@ -27,7 +29,7 @@ class AtomTable:
 
     def __init__(self, fname:str = ''):
         self.fname = fname
-        self.composition = Counter()
+        self.compositions = dict()
 
     def _cleanLine(self, line):
         elems = [y for y in [x.strip() for x in line.split('\t')] if y and y[:1] != ';']
@@ -52,7 +54,7 @@ class AtomTable:
             elif tag == 'R':
                 if not headers or len(elems) != headersLen:
                     raise RuntimeError('Badly formed atom_table file!')
-                self.composition[elems[0]] = Counter({k:int(v) for k, v in zip(headers[1:], elems[1:]) if v != '0'})
+                self.compositions[elems[0]] = Counter({k:int(v) for k, v in zip(headers[1:], elems[1:]) if v != '0'})
                 continue
 
 
@@ -81,10 +83,10 @@ class AtomTable:
 
         tempDict = Counter()
         for aa in seq:
-            tempDict.update(self.composition[aa])
+            tempDict.update(self.compositions[aa])
 
-        if nTerm: tempDict.update(self.composition[AtomTable._nTermStr])
-        if cTerm: tempDict.update(self.composition[AtomTable._cTermStr])
+        if nTerm: tempDict.update(self.compositions[AtomTable._nTermStr])
+        if cTerm: tempDict.update(self.compositions[AtomTable._cTermStr])
 
         return tempDict
 
@@ -95,14 +97,34 @@ class AtomTable:
         return Composition(self._getComposition(seq, nTerm, cTerm), charge = charge)
 
 
-    def getMass(self, seq: str, mono = True,
+    def getMass(self, seq: str = None, composition: Dict = None,
+                charge: int = 0, mono = True,
                 nTerm = True, cTerm = True) -> float:
+        '''
+        Calculate mass of sequence or formula.
 
-        comp = self._getComposition(seq, nTerm, cTerm)
+        Function accepts `seq` xor `composition`.
+
+        :param seq: peptide sequence
+        :param composition: Peptide composition.
+        :param charge: Peptide charge.
+        If None, 'H+' in composition is used, else specified charge is used.
+        '''
+
+        if sum([1 for x in [seq, composition] if x is not None]) != 1:
+            raise RuntimeError('Either seq xor composition must be specified')
+
+        if seq is not None:
+            _comp = self.getComposition(seq, nTerm, cTerm,
+                                        charge=0 if charge is None else charge)
+        else:
+            _comp = composition
+            if charge is not None:
+                _comp['H+'] = charge
 
         massIndex = 1 if mono else 0
         ret = float(0)
-        for atom, count in comp.items():
+        for atom, count in _comp.items():
             ret += self._atom_masses[atom][massIndex] * count
 
         return ret

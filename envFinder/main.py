@@ -4,6 +4,7 @@ import os
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from pyteomics.mass import Composition
 
 import modules as src
 
@@ -12,7 +13,7 @@ def read_pep_stats(fname):
     pepStats = pd.read_csv(fname, sep='\t')
     pepStats = pepStats[pepStats['is_modified'].apply(bool)]
     #pepStats = pepStats[cols].drop_duplicates()
-    pepStats.reset_index(inplace = True)
+    pepStats.reset_index(inplace = True, drop = True)
     # pepStats['precursor_file'] = pepStats['parent_file'].apply(lambda x: x.replace('.ms2', '.ms1'))
     return(pepStats)
 
@@ -80,17 +81,23 @@ def main():
         mono_mzs = dict()
         envs = dict()
         charge = row['charge']
-        sequence = row['sequence']
-        sequences = [sequence.replace('*', '', i) for i in range(0, sequence.count('*') + 1)]
-        for s in sequences:
-            comp_temp = atom_table.getComposition(s, row['charge'])
+        sequence = row['sequence'].upper()
+        sequences = [sequence.replace('*', '', x) for x in range(0, sequence.count('*') + 1)]
+        for sequences_i, s in enumerate(sequences):
+            if args.formula_source == 'calculate':
+                comp_temp = atom_table.getComposition(s, row['charge'])
+            else:
+                mod_diff = atom_table.getComposition(''.join(['*' for _ in range(sequences_i)]), 0, nTerm=False, cTerm=False)
+                comp_temp = Composition(formula=src.utils.formula_to_pyteomics_formula(row['formula']), charge=row['charge'])
+                comp_temp -= mod_diff
+
             envs[s] = src.getEnvelope(comp_temp, threshold = 0.01)
-            mono_mass = atom_table.getMass(s)
+            mono_mass = atom_table.getMass(composition=comp_temp, charge=0)
             charge = row['charge']
             mono_mzs[s] = (mono_mass + charge) / charge
 
         spec = ms1_files[row['parent_file']].getSpectra(row['precursor_scan'],
-                                                       (min(mono_mzs.values()) - 5, max(mono_mzs.values()) + 5))
+                                                        (min(mono_mzs.values()) - 5, max(mono_mzs.values()) + 5))
 
         consensus = dict()
         best_score = 0
@@ -114,22 +121,22 @@ def main():
         goodEnvTemp = False
         if best_index is not None:
             goodEnvTemp = sequences[best_index] == sequence and best_score >= args.env_co
-        #row['good_envelope'] = goodEnvTemp
+        print('\tRow: {}, {} -> {}'.format(i, row['scan'], goodEnvTemp))
         pepStats.at[i, 'good_envelope'] = goodEnvTemp
 
         if args.plotEnv:
 
             fig, ax = plt.subplots(len(sequences), 1, sharex=True)
             fig.set_size_inches(6.4, 2.4 * len(sequences))
-            for i, s in enumerate(sequences):
-                consensus[s].plotEnv(ax[i], isBest=(i == best_index))
+            for k, s in enumerate(sequences):
+                consensus[s].plotEnv(ax[k], isBest=(k == best_index))
 
             plt.xlabel('m/z')
             mult = args.mz_step_margin
             plt.xlim(min_mz - (mult / charge) * mult, max_mz + (mult / charge) * mult)
 
             ofname = '{}/envelopes/{}_{}_{}_{}.pdf'.format(os.getcwd(),
-                                                           row['sample_name'],
+                                                           os.path.splitext(row['parent_file'])[0],
                                                            make_of_seq(row['sequence']),
                                                            row['scan'],
                                                            row['charge'])

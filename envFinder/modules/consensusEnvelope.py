@@ -195,7 +195,10 @@ class ConsensusEnvelope(object):
                 max_int = max([x.point.int for x in self._actual if x.link is not None])
             except ValueError:
                 sys.stdout.write('No points in envelope found!\n')
-                max_int = max(self._actual, key = lambda x: x.point.int).point.int
+                if len(self._actual) == 0:
+                    max_int = max(self._theoretical, key = lambda x: x.point.int).point.int
+                else:
+                    max_int = max(self._actual, key = lambda x: x.point.int).point.int
 
             for i in range(len(self._actual)):
                 self._actual[i].point.int /= max_int
@@ -234,10 +237,12 @@ class ConsensusEnvelope(object):
         #plot actual spectra
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
-            _, stemlines, _ = ax.stem([x.point.mz for x in self._actual],
-                                       [x.point.int for x in self._actual],
-                                       basefmt = ' ', markerfmt = ' ',
-                                       use_line_collection = False)
+            stemlines = list()
+            if len(self._actual) > 0:
+                _, stemlines, _ = ax.stem([x.point.mz for x in self._actual],
+                                          [x.point.int for x in self._actual],
+                                          basefmt = ' ', markerfmt = ' ',
+                                          use_line_collection = False)
 
         for i in range(len(stemlines)):
             if self._actual[i].link is None:

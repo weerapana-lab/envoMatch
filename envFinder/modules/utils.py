@@ -1,4 +1,7 @@
 
+import re
+
+_ATOM_RE = r'(\(\d+\))?([A-Z][a-z]?)(\d+)?'
 
 def inRange(value, compare, range):
     '''
@@ -112,6 +115,22 @@ def getRank(lst, lstKey = lambda x: x):
     values = sorted(values, key = lambda x: x[1], reverse = True)
     return [x[0] for x in values]
 
+
+def formula_to_pyteomics_formula(formula: str):
+    '''
+    Convert a properly formated formula to the stupid format used
+    by the pyteomics package.
+
+    :param formula: Properly formated formula.
+    :return: pyteomics format formula.
+    '''
+    ret = ''
+    for atom in re.findall(_ATOM_RE, formula):
+        ret += '{}{}{}'.format(atom[1],
+                               '' if atom[0] == '' else '[{}]'.format(atom[0]),
+                               atom[2])
+
+    return ret
 
 
 
