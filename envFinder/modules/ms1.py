@@ -49,7 +49,11 @@ class Ms1File(object):
         '''
 
         vals = {'m/z array': _MZ_KEY, 'intensity array': _INT_KEY}
-        spec = self.dat.get_by_id(self._getIDStr(scan))
+        try:
+            spec = self.dat.get_by_id(self._getIDStr(scan))
+        except KeyError as e:
+            sys.stderr.write('Scan ID: {} not found!\n'.format(scan))
+            
         if mz_range is None:
             selection = [True for _ in spec['m/z array']]
         else:
