@@ -23,10 +23,17 @@ def read_pep_stats(fname):
     return(pepStats)
 
 
+def _mkdir(path):
+    if not os.path.isdir(path):
+        sys.stdout.write('Creating {} ...'.format(path))
+        os.mkdir(path)
+        sys.stdout.write('Done!\n')
+
+
 def write_pep_stats(dat, ifname, overwrite = False):
     s = os.path.splitext(ifname)
     base = '{}{}{}'.format(s[0], '_env' if not overwrite else '', s[1])
-    sys.stdout.write('Writing {}'.format(base))
+    sys.stdout.write('\nWriting {}\n'.format(base))
     dat.to_csv(base, sep = '\t', index = False)
 
 
@@ -111,13 +118,25 @@ def _annotate_ms1(row, ms1_files=None, args=None, atom_table=None):
         mult = args.mz_step_margin
         plt.xlim(min_mz - (mult / charge) * mult, max_mz + (mult / charge) * mult)
 
-        ofname = '{}/envelopes/{}_{}_{}_{}.pdf'.format(os.getcwd(),
-                                                       os.path.splitext(row['parent_file'])[0],
-                                                       make_of_seq(row['sequence']),
-                                                       row['scan'],
-                                                       row['charge'])
+        good_bad_temp = ''
+        if args.splitPlots:
+            good_bad_temp = 'good' if ret else 'bad'
+        path_temp = '{}/envelopes/{}'.format(os.getcwd(), good_bad_temp)
+        ofname = '{}/{}_{}_{}_{}.pdf'.format(path_temp,
+                                             os.path.splitext(row['parent_file'])[0],
+                                             make_of_seq(row['sequence']),
+                                             row['scan'],
+                                             row['charge'])
+
+        if args.verbose:
+            sys.stdout.write('Creating {}...'.format(ofname))
+
         plt.savefig(ofname)
         plt.close('all')
+
+        if args.verbose:
+            sys.stdout.write('Done\n')
+
         return ret, consensus[sequence].envScore
 
 
@@ -143,7 +162,7 @@ def main():
     ms1_prefix = [os.path.dirname(os.path.abspath(args.ionFinder_output))] + args.ms1_prefix
     for f in pepStats['parent_file'].unique():
         canidate_paths = ['{}/{}.{}'.format(x, os.path.splitext(f)[0], args.file_type) for x in ms1_prefix]
-        path_temp = None
+        path = None
         for c in canidate_paths:
             if os.path.isfile(c):
                 sys.stdout.write('Found ms1 file for {}!\n\tReading {}'.format(f, c))
@@ -158,10 +177,10 @@ def main():
 
     if args.plotEnv:
         path_temp = '{}/envelopes'.format(os.getcwd())
-        if not os.path.isdir(path_temp):
-            sys.stdout.write('Creating {} ...'.format(path_temp))
-            os.mkdir(path_temp)
-            sys.stdout.write('Done!\n')
+        _mkdir(path_temp)
+        if args.splitPlots:
+            for s in ['good', 'bad']:
+                _mkdir('{}/{}'.format(path_temp, s))
 
     sys.stdout.write('Searching for envelopes using {} thread(s)...\n'.format(_nThread))
     nRow = len(pepStats.index)

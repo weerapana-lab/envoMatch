@@ -32,6 +32,9 @@ def parseArgs():
     parser.add_argument('--plotEnv', action='store_true', default=False,
                         help='Should plot of envelopes be saved?')
 
+    parser.add_argument('--splitPlots', action='store_true', default=False,
+                        help='Split "good" and "bad" envelope plots in separate directories.')
+
     parser.add_argument('-p', '--parallel', choices=[0, 1], type=int, default=1,
                         help='Chose whether envelope matching should be performed in parallel.'
                              ' Parallel processing is performed on up to the number of logical cores on your system. '
