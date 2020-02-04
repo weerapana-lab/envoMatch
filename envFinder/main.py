@@ -7,6 +7,7 @@ import functools
 
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from pyteomics.mass import Composition
 
@@ -73,7 +74,7 @@ def _annotate_ms1(row, ms1_files=None, args=None, atom_table=None):
     if spec is None:
         if _verbose:
             sys.stderr.write('Scan: {} not found in {}\n'.format(row['precursor_scan'], row['parent_file']))
-        return 'ERROR: Spectrum not found!'
+        return 'ERROR: Spectrum not found!', 0
 
     consensus = dict()
     best_score = 0
@@ -117,7 +118,7 @@ def _annotate_ms1(row, ms1_files=None, args=None, atom_table=None):
                                                        row['charge'])
         plt.savefig(ofname)
         plt.close('all')
-        return ret
+        return ret, consensus[sequence].envScore
 
 
 def main():
@@ -164,12 +165,12 @@ def main():
 
     sys.stdout.write('Searching for envelopes using {} thread(s)...\n'.format(_nThread))
     nRow = len(pepStats.index)
-    good_envelopes = list()
+    env_data = list()
     input_lst = [x[1] for x in pepStats.iterrows()]
     show_bar = not(args.verbose and args.parallel == 0)
     if show_bar:
         with Pool(processes=_nThread) as pool:
-            good_envelopes = list(tqdm(pool.imap(functools.partial(_annotate_ms1,
+            env_data = list(tqdm(pool.imap(functools.partial(_annotate_ms1,
                                                                    ms1_files=ms1_files,
                                                                    args=args,
                                                                    atom_table=atom_table),
@@ -180,9 +181,10 @@ def main():
     else:
         for i, row in pepStats.iterrows():
             sys.stdout.write('\tWorking on {} of {}\r'.format(i, nRow))
-            good_envelopes.append(_annotate_ms1(row, ms1_files, args, atom_table))
+            env_data.append(_annotate_ms1(row, ms1_files, args, atom_table))
 
-    pepStats['good_envelope'] = good_envelopes
+    pepStats['good_envelope'] = [x[0] for x in env_data]
+    pepStats['env_score'] = ['NA' if np.isnan(x[1]) else x[1] for x in env_data]
 
     sys.stdout.write('\nDone!\n')
     write_pep_stats(pepStats, args.ionFinder_output, overwrite = args.overwrite)
