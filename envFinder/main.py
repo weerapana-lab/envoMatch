@@ -1,7 +1,11 @@
 
 import sys
 import os
+from multiprocessing import Pool
+from multiprocessing import cpu_count
+import functools
 
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 import pandas as pd
 from pyteomics.mass import Composition
@@ -37,9 +41,12 @@ def make_of_seq(seq, mod_str = '*'):
     return ret
 
 
-def annotate_ms1(row, ms1_files, args, atom_table):
+def _annotate_ms1(row, ms1_files=None, args=None, atom_table=None):
 
+    # check that required args are suplied
+    assert sum([0 if x is None else 1 for x in [ms1_files, args, atom_table]]) == 3
     ret = False
+    _verbose = args.verbose
 
     #get cit and arg envelopes
     mono_mzs = dict()
@@ -63,6 +70,11 @@ def annotate_ms1(row, ms1_files, args, atom_table):
     spec = ms1_files[row['parent_file']].getSpectra(row['precursor_scan'],
                                                     (min(mono_mzs.values()) - 5, max(mono_mzs.values()) + 5))
 
+    if spec is None:
+        if _verbose:
+            sys.stderr.write('Scan: {} not found in {}\n'.format(row['precursor_scan'], row['parent_file']))
+        return 'ERROR: Spectrum not found!'
+
     consensus = dict()
     best_score = 0
     best_index = None
@@ -74,7 +86,7 @@ def annotate_ms1(row, ms1_files, args, atom_table):
 
         consensus[s] = src.ConsensusEnvelope(spec_temp, env, sequence = s)
         consensus[s].set_mono(mono_mz = mono_mzs[s])
-        consensus[s].annotate(remove_unlabeled=False)
+        consensus[s].annotate(remove_unlabeled=False, verbose=_verbose)
 
         if consensus[s].envScore > best_score:
             best_score = consensus[s].envScore
@@ -111,6 +123,13 @@ def annotate_ms1(row, ms1_files, args, atom_table):
 def main():
     args = src.parseArgs()
 
+    # calc nThread
+    _nThread = args.nThread
+    if args.parallel and args.nThread is None:
+        _nThread = cpu_count()
+    elif not args.parallel and args.nThread is None:
+        _nThread=1
+
     #done once
     pepStats = read_pep_stats(args.ionFinder_output)
     pepStats['good_envelope'] = False
@@ -143,12 +162,26 @@ def main():
             os.mkdir(path_temp)
             sys.stdout.write('Done!\n')
 
-    sys.stdout.write('Searching for envelopes...\n')
+    sys.stdout.write('Searching for envelopes using {} thread(s)...\n'.format(_nThread))
     nRow = len(pepStats.index)
     good_envelopes = list()
-    for i, row in pepStats.iterrows():
-        sys.stdout.write('\tWorking on {} of {}\r'.format(i, nRow))
-        good_envelopes.append(annotate_ms1(row, ms1_files, args, atom_table))
+    input_lst = [x[1] for x in pepStats.iterrows()]
+    show_bar = not(args.verbose and args.parallel == 0)
+    if show_bar:
+        with Pool(processes=_nThread) as pool:
+            good_envelopes = list(tqdm(pool.imap(functools.partial(_annotate_ms1,
+                                                                   ms1_files=ms1_files,
+                                                                   args=args,
+                                                                   atom_table=atom_table),
+                                                 input_lst),
+                                                 total=len(pepStats.index),
+                                                 miniters=1,
+                                                 file=sys.stdout))
+    else:
+        for i, row in pepStats.iterrows():
+            sys.stdout.write('\tWorking on {} of {}\r'.format(i, nRow))
+            good_envelopes.append(_annotate_ms1(row, ms1_files, args, atom_table))
+
     pepStats['good_envelope'] = good_envelopes
 
     sys.stdout.write('\nDone!\n')
