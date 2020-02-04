@@ -138,7 +138,7 @@ class ConsensusEnvelope(object):
         return enumerate(self._theoretical)
 
 
-    def annotate(self, remove_unlabeled, normalize = True):
+    def annotate(self, remove_unlabeled, normalize=True, verbose=True):
         '''
         Annotate actual spectra with theoretical envelope.
 
@@ -194,7 +194,8 @@ class ConsensusEnvelope(object):
             try:
                 max_int = max([x.point.int for x in self._actual if x.link is not None])
             except ValueError:
-                sys.stdout.write('No points in envelope found!\n')
+                if verbose:
+                    sys.stdout.write('No points in envelope found!\n')
                 if len(self._actual) == 0:
                     max_int = max(self._theoretical, key = lambda x: x.point.int).point.int
                 else:
@@ -212,9 +213,12 @@ class ConsensusEnvelope(object):
 
 
     def calcEnvScore(self):
-        cor = np.corrcoef(x = [x.point.int for x in self._theoretical],
-                          y = [x.link.point.int if x.link is not None else 0 for x in self._theoretical])
-        self.envScore = cor[0,1]
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+
+            cor = np.corrcoef(x = [x.point.int for x in self._theoretical],
+                              y = [x.link.point.int if x.link is not None else 0 for x in self._theoretical])
+            self.envScore = cor[0,1]
 
 
     def plotEnv(self, ax, title = None, isBest = False):

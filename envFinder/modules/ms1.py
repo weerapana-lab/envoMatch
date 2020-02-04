@@ -1,4 +1,5 @@
 
+import sys
 from pyteomics import ms1, mzml, mzxml
 
 _MZ_KEY = 'mz'
@@ -11,23 +12,24 @@ class Ms1File(object):
        return ((mono_mz - range) / charge, (mono_mz + range) / charge)
 
     @staticmethod
-    def getReadFxn(type):
-        if type == 'ms1':
+    def getReadFxn(file_type):
+        if file_type == 'ms1':
             return ms1.read
-        elif type == 'mzXML':
+        elif file_type == 'mzXML':
             return mzxml.read
-        elif type == 'mzML':
+        elif file_type == 'mzML':
             return mzml.read
         else:
-            raise RuntimeError('{} is an invalid file type!'.format(type))
+            raise RuntimeError('{} is an invalid file type!'.format(file_type))
 
     def _getIDStr(self, id):
-        if type == 'ms1':
+        if self.file_type == 'ms1':
             return str(id).zfill(6)
         else:
             return str(id)
 
     def __init__(self, fname = None, file_type = 'mzXML'):
+        self.file_type = file_type
         if fname is None:
             self.fname = str()
         else: self.read(fname, file_type)
@@ -53,7 +55,8 @@ class Ms1File(object):
             spec = self.dat.get_by_id(self._getIDStr(scan))
         except KeyError as e:
             sys.stderr.write('Scan ID: {} not found!\n'.format(scan))
-            
+            return None
+
         if mz_range is None:
             selection = [True for _ in spec['m/z array']]
         else:
