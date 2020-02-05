@@ -137,7 +137,7 @@ def _annotate_ms1(row, ms1_files=None, args=None, atom_table=None):
         if args.verbose:
             sys.stdout.write('Done\n')
 
-        return ret, consensus[sequence].envScore
+    return ret, consensus[sequence].envScore
 
 
 def main():
