@@ -1,6 +1,7 @@
 
 import sys
 import os
+import argparse
 from multiprocessing import Pool
 from multiprocessing import cpu_count
 import functools
@@ -12,6 +13,25 @@ import pandas as pd
 from pyteomics.mass import Composition
 
 import modules as src
+
+def parseArgs():
+    parser = argparse.ArgumentParser(prog='envFinder',
+                                     parents=[src.PARENT_PARSER])
+
+    args = parser.parse_args()
+
+    #check ms1 prefix list
+    if args.ms1_prefix is None:
+        args.ms1_prefix = [os.path.dirname(os.path.abspath(args.ionFinder_output))]
+    else:
+        args.ms1_prefix.insert(0, os.path.dirname(os.path.abspath(args.ionFinder_output)))
+
+    for p in args.ms1_prefix:
+        if not os.path.isdir(p):
+            raise RuntimeError('{} is not a directory!'.format(p))
+
+    return args
+
 
 def read_pep_stats(fname):
     #cols = ['sequence', 'parent_mz', 'charge', 'scan', 'precursor_scan', 'parent_file', 'sample_name']
@@ -141,7 +161,7 @@ def _annotate_ms1(row, ms1_files=None, args=None, atom_table=None):
 
 
 def main():
-    args = src.parseArgs()
+    args = parseArgs()
 
     # calc nThread
     _nThread = args.nThread
