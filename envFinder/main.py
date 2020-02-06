@@ -22,9 +22,9 @@ def parseArgs():
 
     #check ms1 prefix list
     if args.ms1_prefix is None:
-        args.ms1_prefix = [os.path.dirname(os.path.abspath(args.ionFinder_output))]
+        args.ms1_prefix = [os.path.dirname(os.path.abspath(args.input_file))]
     else:
-        args.ms1_prefix.insert(0, os.path.dirname(os.path.abspath(args.ionFinder_output)))
+        args.ms1_prefix.insert(0, os.path.dirname(os.path.abspath(args.input_file)))
 
     for p in args.ms1_prefix:
         if not os.path.isdir(p):
@@ -171,7 +171,7 @@ def main():
         _nThread=1
 
     #done once
-    pepStats = read_pep_stats(args.ionFinder_output)
+    pepStats = read_pep_stats(args.input_file)
     pepStats['good_envelope'] = False
 
     atom_table = src.AtomTable(args.atom_table)
@@ -179,7 +179,7 @@ def main():
         exit()
 
     ms1_files = dict()
-    ms1_prefix = [os.path.dirname(os.path.abspath(args.ionFinder_output))] + args.ms1_prefix
+    ms1_prefix = [os.path.dirname(os.path.abspath(args.input_file))] + args.ms1_prefix
     for f in pepStats['parent_file'].unique():
         canidate_paths = ['{}/{}.{}'.format(x, os.path.splitext(f)[0], args.file_type) for x in ms1_prefix]
         path = None
@@ -226,7 +226,7 @@ def main():
     pepStats['env_score'] = ['NA' if np.isnan(x[1]) else x[1] for x in env_data]
 
     sys.stdout.write('\nDone!\n')
-    write_pep_stats(pepStats, args.ionFinder_output, overwrite = args.overwrite)
+    write_pep_stats(pepStats, args.input_file, overwrite = args.overwrite)
 
 
 if __name__ == "__main__":

@@ -17,8 +17,8 @@ PARENT_PARSER.add_argument('-t', '--file_type', choices=['ms1', 'mzXML', 'mzML']
 
 PARENT_PARSER.add_argument('--ms1_prefix', action='append',
                            help='Append directory to search path for ms1 files. '
-                                 'By default only the current working directory is used. '
-                                 'Additional directories are searched in the order they are provided.')
+                                'By default only the current working directory is used. '
+                                'Additional directories are searched in the order they are provided.')
 
 PARENT_PARSER.add_argument('-f', '--formula_source', choices=['input', 'calculate'], default='calculate',
                            help='Where should peptide formulas come from? Default is calculate.')
@@ -33,7 +33,7 @@ PARENT_PARSER.add_argument('--plotEnv', action='store_true', default=False,
 PARENT_PARSER.add_argument('--splitPlots', action='store_true', default=False,
                            help='Split "good" and "bad" envelope plots in separate directories.')
 
-PARENT_PARSER.add_argument('-p', '--parallel', choices=[0, 1], type=int, default=1,
+PARENT_PARSER.add_argument('--parallel', choices=[0, 1], type=int, default=1,
                            help='Chose whether envelope matching should be performed in parallel.'
                                 ' Parallel processing is performed on up to the number of logical cores on your system. '
                                 '1 is the default.')
@@ -48,6 +48,6 @@ PARENT_PARSER.add_argument('--overwrite', type=int, choices=[0, 1], default=0,
 PARENT_PARSER.add_argument('-v', '--verbose', action='store_true', default=False,
                            help='Print verbose output?')
 
-PARENT_PARSER.add_argument('ionFinder_output', type=str,
+PARENT_PARSER.add_argument('input_file', type=str,
                            help='ionFinder output file to read.')
 
