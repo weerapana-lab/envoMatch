@@ -7,10 +7,10 @@ from multiprocessing import cpu_count
 import functools
 
 from tqdm import tqdm
-import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from pyteomics.mass import Composition
+from numpy import isnan
 
 import modules as src
 
@@ -112,8 +112,8 @@ def _annotate_ms1(row, ms1_files=None, args=None, atom_table=None):
         env = [src.DataPoint(mz, k) for mz, k in envs[s]]
         spec_temp = [src.DataPoint(mz, k) for mz, k in zip(spec['mz'], spec['int'])]
 
-        consensus[s] = src.ConsensusEnvelope(spec_temp, env, sequence = s)
-        consensus[s].set_mono(mono_mz = mono_mzs[s])
+        consensus[s] = src.ConsensusEnvelope(spec_temp, env, sequence=s)
+        consensus[s].set_mono(mono_mz=mono_mzs[s])
         consensus[s].annotate(remove_unlabeled=False, verbose=_verbose)
 
         if consensus[s].envScore > best_score:
@@ -128,7 +128,6 @@ def _annotate_ms1(row, ms1_files=None, args=None, atom_table=None):
     ret = goodEnvTemp
 
     if args.plotEnv:
-
         fig, ax = plt.subplots(len(sequences), 1, sharex=True)
         fig.set_size_inches(6.4, 2.4 * len(sequences))
         for k, s in enumerate(sequences):
@@ -210,20 +209,30 @@ def main():
     if show_bar:
         with Pool(processes=_nThread) as pool:
             env_data = list(tqdm(pool.imap(functools.partial(_annotate_ms1,
-                                                                   ms1_files=ms1_files,
-                                                                   args=args,
-                                                                   atom_table=atom_table),
-                                                 input_lst),
-                                                 total=len(pepStats.index),
-                                                 miniters=1,
-                                                 file=sys.stdout))
+                                                             ms1_files=ms1_files,
+                                                             args=args,
+                                                             atom_table=atom_table),
+                                           input_lst),
+                                           total=len(pepStats.index),
+                                           miniters=1,
+                                           file=sys.stdout))
     else:
         for i, row in pepStats.iterrows():
             sys.stdout.write('\tWorking on {} of {}\r'.format(i, nRow))
             env_data.append(_annotate_ms1(row, ms1_files, args, atom_table))
 
     pepStats['good_envelope'] = [x[0] for x in env_data]
-    pepStats['env_score'] = ['NA' if np.isnan(x[1]) else x[1] for x in env_data]
+    pepStats['env_score'] = ['NA' if isnan(x[1]) else x[1] for x in env_data]
+
+    #arrange columns
+    cols = list(pepStats.columns)
+    order_cols = ['contains_Cit', 'env_score', 'good_envelope']
+    if 'contains_Cit' in cols:
+        cit_index = cols.index('contains_Cit')
+        col_order = [cols[x] for x in range(cit_index) if cols[x] not in order_cols]
+        col_order += order_cols        
+        col_order += [x for x in cols if x not in col_order]
+        pepStats = pepStats[col_order]
 
     sys.stdout.write('\nDone!\n')
     write_pep_stats(pepStats, args.input_file, overwrite = args.overwrite)
@@ -231,3 +240,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

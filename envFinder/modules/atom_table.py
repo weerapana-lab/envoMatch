@@ -27,7 +27,7 @@ class AtomTable:
                     "Cl": (35.45, 34.96885),
                     "Br": (79.904, 78.91834)}
 
-    def __init__(self, fname:str = ''):
+    def __init__(self, fname: str = ''):
         self.fname = fname
         self.compositions = dict()
 
@@ -79,27 +79,29 @@ class AtomTable:
 
 
     def _getComposition(self, seq: str,
-                       nTerm = True, cTerm = True):
+                       nTerm=True, cTerm=True):
 
         tempDict = Counter()
         for aa in seq:
             tempDict.update(self.compositions[aa])
 
-        if nTerm: tempDict.update(self.compositions[AtomTable._nTermStr])
-        if cTerm: tempDict.update(self.compositions[AtomTable._cTermStr])
+        if nTerm:
+            tempDict.update(self.compositions[AtomTable._nTermStr])
+        if cTerm:
+            tempDict.update(self.compositions[AtomTable._cTermStr])
 
         return tempDict
 
 
-    def getComposition(self, seq: str, charge: int = 1,
-                       nTerm = True, cTerm = True):
+    def getComposition(self, seq: str, charge: int=1,
+                       nTerm=True, cTerm=True):
 
-        return Composition(self._getComposition(seq, nTerm, cTerm), charge = charge)
+        return Composition(self._getComposition(seq, nTerm, cTerm), charge=charge)
 
 
-    def getMass(self, seq: str = None, composition: Dict = None,
-                charge: int = 0, mono = True,
-                nTerm = True, cTerm = True) -> float:
+    def getMass(self, seq: str=None, composition: Dict=None,
+                charge: int=0, mono=True,
+                nTerm=True, cTerm=True) -> float:
         '''
         Calculate mass of sequence or formula.
 
@@ -115,8 +117,7 @@ class AtomTable:
             raise RuntimeError('Either seq xor composition must be specified')
 
         if seq is not None:
-            _comp = self.getComposition(seq, nTerm, cTerm,
-                                        charge=0 if charge is None else charge)
+            _comp = self.getComposition(seq, nTerm, cTerm, 0 if charge is None else charge)
         else:
             _comp = composition
             if charge is not None:
@@ -132,7 +133,7 @@ class AtomTable:
 class AverageIsotope():
     __slots__ = ['_count', '_mzSum', 'intSum', 'avg_mz']
 
-    def __init__(self, mzSum: float = 0, intSum: float = 0):
+    def __init__(self, mzSum: float=0, intSum: float=0):
         self._count = int(0) if mzSum == 0 else 1
         self._mzSum = mzSum
         self.intSum = intSum
@@ -174,9 +175,9 @@ class AverageIsotope():
 
 
 def getEnvelope(composition: Composition,
-                threshold: float = 1e-3,
-                mass_defect_match_range: float = 0.05,
-                combineDefects = True) -> list:
+                threshold: float=1e-3,
+                mass_defect_match_range: float=0.05,
+                combineDefects=True) -> list:
 
     #get all isotopologues with reasonable abundance
     temp = list()
@@ -189,9 +190,9 @@ def getEnvelope(composition: Composition,
 
     #combine and average mass defects
     if combineDefects:
-        masses = SortedList(key = lambda x: x.avg_mz)
+        masses = SortedList(key=lambda x: x.avg_mz)
         for isotope in temp:
-            idx = find_nearest_index(masses, isotope[0], arrKey = lambda x: x.avg_mz)
+            idx = find_nearest_index(masses, isotope[0], arrKey=lambda x: x.avg_mz)
 
             if masses and inRange(isotope[0], masses[idx].avg_mz, mass_defect_match_range):
                 masses[idx].append(isotope)
@@ -199,5 +200,5 @@ def getEnvelope(composition: Composition,
                 masses.add(AverageIsotope(isotope[0], isotope[1]))
 
         return [x.value() for x in masses]
-    else:
-        return temp
+    return temp
+
