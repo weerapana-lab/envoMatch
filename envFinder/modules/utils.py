@@ -118,10 +118,10 @@ def getRank(lst, lstKey = lambda x: x):
 
 def formula_to_pyteomics_formula(formula: str):
     '''
-    Convert a properly formated formula to the stupid format used
+    Convert a properly formatted formula to the stupid format used
     by the pyteomics package.
 
-    :param formula: Properly formated formula.
+    :param formula: Properly formatted formula.
     :return: pyteomics format formula.
     '''
     ret = ''

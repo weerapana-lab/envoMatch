@@ -35,12 +35,12 @@ def parseArgs():
 
 def read_pep_stats(fname):
     #cols = ['sequence', 'parent_mz', 'charge', 'scan', 'precursor_scan', 'parent_file', 'sample_name']
-    pepStats = pd.read_csv(fname, sep='\t')
-    pepStats = pepStats[pepStats['is_modified'].apply(bool)]
-    #pepStats = pepStats[cols].drop_duplicates()
-    pepStats.reset_index(inplace = True, drop = True)
-    # pepStats['precursor_file'] = pepStats['parent_file'].apply(lambda x: x.replace('.ms2', '.ms1'))
-    return(pepStats)
+    pep_stats = pd.read_csv(fname, sep='\t')
+    pep_stats = pep_stats[pep_stats['is_modified'].apply(bool)]
+    #pep_stats = pep_stats[cols].drop_duplicates()
+    pep_stats.reset_index(inplace = True, drop = True)
+    # pep_stats['precursor_file'] = pep_stats['parent_file'].apply(lambda x: x.replace('.ms2', '.ms1'))
+    return(pep_stats)
 
 
 def _mkdir(path):
@@ -71,7 +71,7 @@ def make_of_seq(seq, mod_str = '*'):
 
 def _annotate_ms1(row, ms1_files=None, args=None, atom_table=None):
 
-    # check that required args are suplied
+    # check that required args are supplied
     assert sum([0 if x is None else 1 for x in [ms1_files, args, atom_table]]) == 3
     ret = False
     _verbose = args.verbose
@@ -95,8 +95,12 @@ def _annotate_ms1(row, ms1_files=None, args=None, atom_table=None):
         charge = row['charge']
         mono_mzs[s] = (mono_mass + charge) / charge
 
-    spec = ms1_files[row['parent_file']].getSpectra(row['precursor_scan'],
-                                                    (min(mono_mzs.values()) - 5, max(mono_mzs.values()) + 5))
+    if args.pre_scan_src == 'ms':
+        pre_scan_tmp = ms1_files[row['parent_file']].get_precursor_scan(row['scan'])
+    else:
+        pre_scan_tmp = row['precursor_scan']
+    spec = ms1_files[row['parent_file']].get_spectra(pre_scan_tmp,
+                                                     (min(mono_mzs.values()) - 5, max(mono_mzs.values()) + 5))
 
     if spec is None:
         if _verbose:
@@ -167,19 +171,19 @@ def main():
     if args.parallel and args.nThread is None:
         _nThread = cpu_count()
     elif not args.parallel and args.nThread is None:
-        _nThread=1
+        _nThread = 1
 
     #done once
-    pepStats = read_pep_stats(args.input_file)
-    pepStats['good_envelope'] = False
+    pep_stats = read_pep_stats(args.input_file)
+    pep_stats['good_envelope'] = False
 
     atom_table = src.AtomTable(args.atom_table)
     if not atom_table.read():
-        exit()
+        sys.exit()
 
     ms1_files = dict()
     ms1_prefix = [os.path.dirname(os.path.abspath(args.input_file))] + args.ms1_prefix
-    for f in pepStats['parent_file'].unique():
+    for f in pep_stats['parent_file'].unique():
         canidate_paths = ['{}/{}.{}'.format(x, os.path.splitext(f)[0], args.file_type) for x in ms1_prefix]
         path = None
         for c in canidate_paths:
@@ -191,7 +195,8 @@ def main():
         if path_temp is None:
             raise RuntimeError('Could not find parent ms1 file for {}!'.format(f))
         else:
-            ms1_files[f] = src.Ms1File(path_temp, file_type=args.file_type)
+            ms1_files[f] = src.Ms1File(path_temp, file_type=args.file_type,
+                                       build_precursor_list=(args.pre_scan_src == 'ms'))
             sys.stdout.write('\n\tDone\n')
 
     if args.plotEnv:
@@ -202,9 +207,9 @@ def main():
                 _mkdir('{}/{}'.format(path_temp, s))
 
     sys.stdout.write('Searching for envelopes using {} thread(s)...\n'.format(_nThread))
-    nRow = len(pepStats.index)
+    nRow = len(pep_stats.index)
     env_data = list()
-    input_lst = [x[1] for x in pepStats.iterrows()]
+    input_lst = [x[1] for x in pep_stats.iterrows()]
     show_bar = not(args.verbose and args.parallel == 0)
     if show_bar:
         with Pool(processes=_nThread) as pool:
@@ -213,29 +218,29 @@ def main():
                                                              args=args,
                                                              atom_table=atom_table),
                                            input_lst),
-                                           total=len(pepStats.index),
+                                           total=len(pep_stats.index),
                                            miniters=1,
                                            file=sys.stdout))
     else:
-        for i, row in pepStats.iterrows():
+        for i, row in pep_stats.iterrows():
             sys.stdout.write('\tWorking on {} of {}\r'.format(i, nRow))
             env_data.append(_annotate_ms1(row, ms1_files, args, atom_table))
 
-    pepStats['good_envelope'] = [x[0] for x in env_data]
-    pepStats['env_score'] = ['NA' if isnan(x[1]) else x[1] for x in env_data]
+    pep_stats['good_envelope'] = [x[0] for x in env_data]
+    pep_stats['env_score'] = ['NA' if isnan(x[1]) else x[1] for x in env_data]
 
     #arrange columns
-    cols = list(pepStats.columns)
+    cols = list(pep_stats.columns)
     order_cols = ['contains_Cit', 'env_score', 'good_envelope']
     if 'contains_Cit' in cols:
         cit_index = cols.index('contains_Cit')
         col_order = [cols[x] for x in range(cit_index) if cols[x] not in order_cols]
         col_order += order_cols        
         col_order += [x for x in cols if x not in col_order]
-        pepStats = pepStats[col_order]
+        pep_stats = pep_stats[col_order]
 
     sys.stdout.write('\nDone!\n')
-    write_pep_stats(pepStats, args.input_file, overwrite = args.overwrite)
+    write_pep_stats(pep_stats, args.input_file, overwrite = args.overwrite)
 
 
 if __name__ == "__main__":

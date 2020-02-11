@@ -23,6 +23,11 @@ PARENT_PARSER.add_argument('--ms1_prefix', action='append',
 PARENT_PARSER.add_argument('-f', '--formula_source', choices=['input', 'calculate'], default='calculate',
                            help='Where should peptide formulas come from? Default is calculate.')
 
+PARENT_PARSER.add_argument('-s', '--pre_scan_src', choices=['input', 'ms'], default='input',
+                           help='Where should precursor scans come from. '
+                           'Chose either the "precursor_scan" column (input) or build precursor list '
+                           'from input MS-1 files (ms1). Default is input.')
+
 PARENT_PARSER.add_argument('-a', '--atom_table', default=ATOM_TABLE_PATH,
                            help='Path to atom table to use in calculating envelopes. '
                                 'Default is: {}'.format(ATOM_TABLE_PATH))

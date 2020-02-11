@@ -22,37 +22,96 @@ class Ms1File(object):
         else:
             raise RuntimeError('{} is an invalid file type!'.format(file_type))
 
-    def _getIDStr(self, id):
+    def _get_id_str(self, scan_id):
         if self.file_type == 'ms1':
-            return str(id).zfill(6)
-        else:
-            return str(id)
+            return str(scan_id).zfill(6)
+        return str(scan_id)
 
-    def __init__(self, fname = None, file_type = 'mzXML'):
+    def __init__(self, fname=None, file_type='mzXML', **kwargs):
+        '''
+        Default constructor.
+
+        Parameters
+        ----------
+        fname: str
+            Path to file to read. If None, no file is read.
+        file_type: str
+            Input file type. One of (mzXML, mzML, ms1)
+        **kwargs
+            Additional arguments passes to self.read
+        '''
+
         self.file_type = file_type
+        self.precursors = None
         if fname is None:
             self.fname = str()
-        else: self.read(fname, file_type)
+        else: self.read(fname, file_type, **kwargs)
 
-    def read(self, fname, file_type = 'mzXML'):
+    def _build_precursor_list(self):
+        _scans = {int(x['num']):x['msLevel'] for x in self.dat}
+
+        self.precursors = dict()
+        for scan in sorted(_scans.keys()):
+            if _scans[scan] == 1:
+                pre_scan = scan
+            elif _scans[scan] == 2:
+                self.precursors[scan] = pre_scan
+
+    def read(self, fname, file_type='mzXML', build_precursor_list=False):
+        '''
+        Read ms1 file.
+
+        Parameters
+        ----------
+        fname: str
+            Name of file to read.
+        file_type: str
+            File type. One of (mzXML, mzML, ms1)
+        build_precursor_list: bool
+            Should self.precursors be populated?
+        '''
+
         self.fname = fname
         _read = Ms1File.getReadFxn(file_type)
-        self.dat = _read(self.fname, use_index = True)
+        self.dat = _read(self.fname, use_index=True)
+        if build_precursor_list:
+            self._build_precursor_list()
 
-    def getSpectra(self, scan, mz_range):
+    def get_precursor_scan(self, scan):
+        '''
+        Get precursor scan for `scan`.
+
+        Raises
+        ------
+        KeyError
+            If `scan` does not exist in ms file.
+        '''
+        return self.precursors[scan]
+
+    def get_spectra(self, scan, mz_range):
         '''
         Return spectra at scan in the mz_range
 
-        :param scan: Scan number to fetch
-        :type scan: int
-        :param mz_range: mz range to return. If None, the entire scan is returned.
-        :type mz_range: Tuple(float, float)
-        :return: Dict with arrays for mz and int
+        Parameters
+        ----------
+        scan: int
+            Scan number to fetch
+        mz_range: Tuple(float, float)
+            mz range to return. If None, the entire scan is returned.
+
+        Raises
+        ------
+        KeyError
+            If `scan` does not exist in ms file.
+
+        Returns
+        -------
+            Dict with arrays for mz and int
         '''
 
         vals = {'m/z array': _MZ_KEY, 'intensity array': _INT_KEY}
         try:
-            spec = self.dat.get_by_id(self._getIDStr(scan))
+            spec = self.dat.get_by_id(self._get_id_str(scan))
         except KeyError as e:
             sys.stderr.write('Scan ID: {} not found!\n'.format(scan))
             return None

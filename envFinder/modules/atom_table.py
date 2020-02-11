@@ -72,7 +72,7 @@ class AtomTable:
             sys.stderr.write('{}\n'.format(e))
             return False
         except Exception as e:
-            sys.stderr.write('An unknown error occured.\n{}\n'.format(e))
+            sys.stderr.write('An unknown error occurred.\n{}\n'.format(e))
             return False
 
         return True
