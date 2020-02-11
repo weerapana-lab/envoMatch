@@ -172,6 +172,7 @@ def main():
         _nThread = cpu_count()
     elif not args.parallel and args.nThread is None:
         _nThread = 1
+    _show_bar = not(args.verbose and args.parallel == 0)
 
     #done once
     pep_stats = read_pep_stats(args.input_file)
@@ -181,23 +182,44 @@ def main():
     if not atom_table.read():
         sys.exit()
 
-    ms1_files = dict()
+    ms1_file_names = dict()
     ms1_prefix = [os.path.dirname(os.path.abspath(args.input_file))] + args.ms1_prefix
+
+    # Get ms1 file paths by checking canidate_paths.
     for f in pep_stats['parent_file'].unique():
         canidate_paths = ['{}/{}.{}'.format(x, os.path.splitext(f)[0], args.file_type) for x in ms1_prefix]
         path = None
         for c in canidate_paths:
             if os.path.isfile(c):
-                sys.stdout.write('Found ms1 file for {}!\n\tReading {}'.format(f, c))
+                if args.verbose:
+                    sys.stdout.write('Found ms1 file for {}!\n\t{}\n'.format(f, c))
                 path_temp = c
                 break
 
         if path_temp is None:
             raise RuntimeError('Could not find parent ms1 file for {}!'.format(f))
         else:
-            ms1_files[f] = src.Ms1File(path_temp, file_type=args.file_type,
+            ms1_file_names[f] = path_temp
+    
+    # Actually read files.
+    sys.stdout.write('\nReading ms1 files using {} thread(s)...\n'.format(min(_nThread, len(ms1_file_names))))
+    if _show_bar:
+        with Pool(processes=min(_nThread, len(ms1_file_names))) as pool:
+            ms1_files = list(tqdm(pool.imap(functools.partial(src.Ms1File,
+                                                              file_type=args.file_type,
+                                                              build_precursor_list=(args.pre_scan_src == 'ms')),
+                                            ms1_file_names.values()),
+                                  total=len(ms1_file_names),
+                                  miniters=1,
+                                  file=sys.stdout))
+        ms1_files = {n: f for n, f in zip(ms1_file_names.keys(), ms1_files)}
+    else:
+        ms1_files = dict()
+        for k, path in ms1_file_names.items():
+            sys.stdout.write('\tReading {}...\n'.format(path))
+            ms1_files[k] = src.Ms1File(fname=path, file_type=args.file_type,
                                        build_precursor_list=(args.pre_scan_src == 'ms'))
-            sys.stdout.write('\n\tDone\n')
+            sys.stdout.write('\tDone!\n')
 
     if args.plotEnv:
         path_temp = '{}/envelopes'.format(os.getcwd())
@@ -206,21 +228,20 @@ def main():
             for s in ['good', 'bad']:
                 _mkdir('{}/{}'.format(path_temp, s))
 
-    sys.stdout.write('Searching for envelopes using {} thread(s)...\n'.format(_nThread))
     nRow = len(pep_stats.index)
+    sys.stdout.write('Searching for envelopes using {} thread(s)...\n'.format(min(_nThread, nRow)))
     env_data = list()
     input_lst = [x[1] for x in pep_stats.iterrows()]
-    show_bar = not(args.verbose and args.parallel == 0)
-    if show_bar:
+    if _show_bar:
         with Pool(processes=_nThread) as pool:
             env_data = list(tqdm(pool.imap(functools.partial(_annotate_ms1,
                                                              ms1_files=ms1_files,
                                                              args=args,
                                                              atom_table=atom_table),
                                            input_lst),
-                                           total=len(pep_stats.index),
-                                           miniters=1,
-                                           file=sys.stdout))
+                                 total=nRow,
+                                 miniters=1,
+                                 file=sys.stdout))
     else:
         for i, row in pep_stats.iterrows():
             sys.stdout.write('\tWorking on {} of {}\r'.format(i, nRow))
