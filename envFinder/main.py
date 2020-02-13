@@ -92,7 +92,7 @@ def _annotate_ms1(row, ms1_files=None, args=None, atom_table=None):
         charge = row['charge']
         mono_mzs[s] = (mono_mass + charge) / charge
 
-    if args.pre_scan_src == 'ms':
+    if args.pre_scan_src == 'ms1':
         pre_scan_tmp = ms1_files[row['parent_file']].get_precursor_scan(row['scan'])
     else:
         pre_scan_tmp = row['precursor_scan']
@@ -208,7 +208,7 @@ def main():
         with Pool(processes=min(_nThread, len(ms1_file_names))) as pool:
             ms1_files = list(tqdm(pool.imap(functools.partial(src.Ms1File,
                                                               file_type=args.file_type,
-                                                              build_precursor_list=(args.pre_scan_src == 'ms')),
+                                                              build_precursor_list=(args.pre_scan_src == 'ms1')),
                                             ms1_file_names.values()),
                                   total=len(ms1_file_names),
                                   miniters=1,
@@ -219,7 +219,7 @@ def main():
         for k, path in ms1_file_names.items():
             sys.stdout.write('\tReading {}...\n'.format(path))
             ms1_files[k] = src.Ms1File(fname=path, file_type=args.file_type,
-                                       build_precursor_list=(args.pre_scan_src == 'ms'))
+                                       build_precursor_list=(args.pre_scan_src == 'ms1'))
             sys.stdout.write('\tDone!\n')
 
     if args.plotEnv:
