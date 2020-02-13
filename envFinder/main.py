@@ -34,12 +34,9 @@ def parseArgs():
 
 
 def read_pep_stats(fname):
-    #cols = ['sequence', 'parent_mz', 'charge', 'scan', 'precursor_scan', 'parent_file', 'sample_name']
     pep_stats = pd.read_csv(fname, sep='\t')
-    pep_stats = pep_stats[pep_stats['is_modified'].apply(bool)]
-    #pep_stats = pep_stats[cols].drop_duplicates()
-    pep_stats.reset_index(inplace = True, drop = True)
-    # pep_stats['precursor_file'] = pep_stats['parent_file'].apply(lambda x: x.replace('.ms2', '.ms1'))
+    #pep_stats = pep_stats[pep_stats['is_modified'].apply(bool)]
+    pep_stats.reset_index(inplace=True, drop=True)
     return(pep_stats)
 
 
@@ -135,7 +132,11 @@ def _annotate_ms1(row, ms1_files=None, args=None, atom_table=None):
         fig, ax = plt.subplots(len(sequences), 1, sharex=True)
         fig.set_size_inches(6.4, 2.4 * len(sequences))
         for k, s in enumerate(sequences):
-            consensus[s].plotEnv(ax[k], isBest=(k == best_index))
+            if len(sequences) == 1:
+                ax_temp = ax
+            else:
+                ax_temp = ax[k]
+            consensus[s].plotEnv(ax_temp, isBest=(k == best_index))
 
         plt.xlabel('m/z')
         mult = args.mz_step_margin
@@ -200,7 +201,7 @@ def main():
             raise RuntimeError('Could not find parent ms1 file for {}!'.format(f))
         else:
             ms1_file_names[f] = path_temp
-    
+
     # Actually read files.
     sys.stdout.write('\nReading ms1 files using {} thread(s)...\n'.format(min(_nThread, len(ms1_file_names))))
     if _show_bar:
@@ -229,7 +230,7 @@ def main():
                 _mkdir('{}/{}'.format(path_temp, s))
 
     nRow = len(pep_stats.index)
-    sys.stdout.write('Searching for envelopes using {} thread(s)...\n'.format(min(_nThread, nRow)))
+    sys.stdout.write('\nSearching for envelopes using {} thread(s)...\n'.format(min(_nThread, nRow)))
     env_data = list()
     input_lst = [x[1] for x in pep_stats.iterrows()]
     if _show_bar:
@@ -256,12 +257,12 @@ def main():
     if 'contains_Cit' in cols:
         cit_index = cols.index('contains_Cit')
         col_order = [cols[x] for x in range(cit_index) if cols[x] not in order_cols]
-        col_order += order_cols        
+        col_order += order_cols
         col_order += [x for x in cols if x not in col_order]
         pep_stats = pep_stats[col_order]
 
     sys.stdout.write('\nDone!\n')
-    write_pep_stats(pep_stats, args.input_file, overwrite = args.overwrite)
+    write_pep_stats(pep_stats, args.input_file, overwrite=args.overwrite)
 
 
 if __name__ == "__main__":
