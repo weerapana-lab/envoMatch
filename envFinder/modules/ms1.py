@@ -86,7 +86,10 @@ class Ms1File(object):
         KeyError
             If `scan` does not exist in ms file.
         '''
-        return self.precursors[scan]
+        try:
+            return self.precursors[scan]
+        except KeyError as e:
+            raise KeyError('Scan: {} does not exist in ms0 file: {}'.format(scan, self.fname))
 
     def get_spectra(self, scan, mz_range):
         '''
@@ -98,11 +101,6 @@ class Ms1File(object):
             Scan number to fetch
         mz_range: Tuple(float, float)
             mz range to return. If None, the entire scan is returned.
-
-        Raises
-        ------
-        KeyError
-            If `scan` does not exist in ms file.
 
         Returns
         -------

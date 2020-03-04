@@ -93,7 +93,11 @@ def _annotate_ms1(row, ms1_files=None, args=None, atom_table=None):
         mono_mzs[s] = (mono_mass + charge) / charge
 
     if args.pre_scan_src == 'ms1':
-        pre_scan_tmp = ms1_files[row['parent_file']].get_precursor_scan(row['scan'])
+        try:
+            pre_scan_tmp = ms1_files[row['parent_file']].get_precursor_scan(row['scan'])
+        except KeyError as e:
+            sys.stderr.write('Error in row: {}\n{}'.format(e, row))
+            pre_scan_tmp = 'SCAN_NOT_FOUND_IN_PRECURSOR_LIST'
     else:
         pre_scan_tmp = row['precursor_scan']
     spec = ms1_files[row['parent_file']].get_spectra(pre_scan_tmp,
