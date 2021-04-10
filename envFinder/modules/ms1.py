@@ -1,5 +1,6 @@
 
 import sys
+import re
 from pyteomics import ms1, mzml, mzxml
 
 _MZ_KEY = 'mz'
@@ -22,10 +23,12 @@ class Ms1File(object):
         else:
             raise RuntimeError('{} is an invalid file type!'.format(file_type))
 
-    def _get_id_str(self, scan_id):
+    def _get_scan(self, scan_id):
         if self.file_type == 'ms1':
-            return str(scan_id).zfill(6)
-        return str(scan_id)
+            return self.dat.get_by_id(str(scan_id).zfill(6))
+        elif self.file_type == 'mzML':
+            return self.dat[self._scan_map[scan_id]]
+        return self.dat.get_by_id(str(scan_id))
 
     def __init__(self, fname=None, file_type='mzXML', **kwargs):
         '''
@@ -43,12 +46,41 @@ class Ms1File(object):
 
         self.file_type = file_type
         self.precursors = None
+        self._scan_map = None
         if fname is None:
             self.fname = str()
         else: self.read(fname, file_type, **kwargs)
 
     def _build_precursor_list(self):
-        _scans = {int(x['num']):x['msLevel'] for x in self.dat}
+        if self.file_type == 'mzXML':
+            _scans = {int(x['num']):x['msLevel'] for x in self.dat}
+        elif self.file_type == 'mzML':
+            scanPattern = re.compile(r'scan=([0-9]+)')
+
+            # test scan pattern on the first scan
+            match = scanPattern.search(self.dat[0]['id'])
+            if match:
+                use_index = False
+            else:
+                use_index = True
+                sys.stderr.write('WARN: Failed to match scan for file {}.\n\tUsing index instead.\n')
+
+            self._scan_map = dict()
+            _scans = dict()
+            for i, s in enumerate(self.dat):
+                if use_index:
+                    _scans[s['index'] + 1] = s['ms level']
+                    self._scan_map[s['index']] = i
+                else:
+                    match = scanPattern.search(s['id'])
+                    if match:
+                        _scan = int(match.group(1))
+                        _scans[_scan] = s['ms level']
+                        self._scan_map[_scan] = i
+                    else:
+                        raise RuntimeError('Failed to find scan number for line {} in file {}'.format(s['id'], self.fname))
+        else:
+            assert(False)
 
         self.precursors = dict()
         for scan in sorted(_scans.keys()):
@@ -109,7 +141,7 @@ class Ms1File(object):
 
         vals = {'m/z array': _MZ_KEY, 'intensity array': _INT_KEY}
         try:
-            spec = self.dat.get_by_id(self._get_id_str(scan))
+            spec = self._get_scan(scan)
         except KeyError as e:
             sys.stderr.write('Scan ID: {} not found!\n'.format(scan))
             return None
@@ -122,12 +154,4 @@ class Ms1File(object):
                                  spec['m/z array'] <= mz_range[1]))
 
         return {v: spec[k][selection] for k, v in vals.items()}
-
-
-
-
-
-
-
-
 
