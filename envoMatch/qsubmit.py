@@ -6,7 +6,7 @@ import subprocess
 import os.path
 from math import ceil
 
-from modules import parent_parser
+from .modules import parent_parser
 
 PBS_MODULE_LOAD_COMMAND = 'module load'
 ENV_FINDER_EXE = 'envFinder'

@@ -18,7 +18,7 @@ setup(name='envoMatch',
       package_dir={'envoMatch':'envoMatch'},
       python_requires='>=3.6.*',
       install_requires=['pyteomics>=4.4', 'lxml>=4.4', 'tqdm', 'sortedcontainers>=2.3', 'pandas>=1.0', 'matplotlib>=3.3'],
-      entry_points={'console_scripts': ['envoMatch=envoMatch:main']},
+      entry_points={'console_scripts': ['envoMatch=envoMatch:main', 'run_envoMatch=envoMatch:qsubmit']},
 )
 
 

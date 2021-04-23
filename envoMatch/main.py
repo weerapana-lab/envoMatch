@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from pyteomics.mass import Composition
 from numpy import isnan
 
-import modules as src
+from . import modules as src
 
 def parseArgs():
     parser = argparse.ArgumentParser(prog='envFinder',
