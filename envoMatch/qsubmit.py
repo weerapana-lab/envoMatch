@@ -9,7 +9,7 @@ from math import ceil
 from .modules import parent_parser
 
 PBS_MODULE_LOAD_COMMAND = 'module load'
-ENV_FINDER_EXE = 'envFinder'
+ENV_FINDER_EXE = 'envoMatch'
 
 def makePBS(mem, ppn, walltime, wd, args):
     pbsName = '{}/{}.pbs'.format(wd, ENV_FINDER_EXE)
@@ -29,7 +29,7 @@ def makePBS(mem, ppn, walltime, wd, args):
 
 def main():
 
-    parser = argparse.ArgumentParser(prog='qsub_envFinder', parents=[parent_parser.PARENT_PARSER],
+    parser = argparse.ArgumentParser(prog='qsub_envoMatch', parents=[parent_parser.PARENT_PARSER],
                                      description='Submit {} job to the queue.'.format(ENV_FINDER_EXE))
 
     parser.add_argument('-m', '--mem', default=8, type=int,

@@ -15,7 +15,7 @@ from numpy import isnan
 from . import modules as src
 
 def parseArgs():
-    parser = argparse.ArgumentParser(prog='envFinder',
+    parser = argparse.ArgumentParser(prog='envoMatch',
                                      parents=[src.PARENT_PARSER])
 
     args = parser.parse_args()
