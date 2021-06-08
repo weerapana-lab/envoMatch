@@ -4,6 +4,9 @@
 testFiles/*
 test/*
 bin/*
+README.html
+README.pdf
+examples/input_env.tsv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

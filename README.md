@@ -1,5 +1,5 @@
 # envoMatch
-Search for peptide isotopic envelopes in ms1 spectra.
+Search for peptide isotopic envelopes in MS1 spectra.
 
 # Installation
 ```bash
@@ -10,6 +10,7 @@ pip install
 ```
 
 # Usage
+
 ```
 usage: envoMatch [-h] [--env_co ENV_CO] [--mz_step_margin MZ_STEP_MARGIN]
                  [-t {ms1,mzXML,mzML}] [--ms1_prefix MS1_PREFIX]
@@ -42,8 +43,7 @@ optional arguments:
                         list from input MS-1 files (ms1). Default is ms1.
   -a ATOM_TABLE, --atom_table ATOM_TABLE
                         Path to atom table to use in calculating envelopes.
-                        Default is: /data/mauraisa/code/envoMatch/db/atom_tabl
-                        es/cit_diff_mod_atoms.txt
+                        Default is: envoMatch/db/atom_tables/cit_diff_mod_atoms.txt
   --plotEnv             Should plot of envelopes be saved?
   --splitPlots          Split "good" and "bad" envelope plots in separate
                         directories.
@@ -51,14 +51,39 @@ optional arguments:
                         parallel. Parallel processing is performed on up to
                         the number of logical cores on your system. 1 is the
                         default.
-  --nThread NTHREAD     Chose how many threads to use for parllel processing.
+  --nThread NTHREAD     Chose how many threads to use for parallel processing.
                         This option overrides the --parallel option.
   --overwrite {0,1}     Should ionFinder_output be overwritten?
   -v, --verbose         Print verbose output?
-  ```
+```
   
-  ## `input_file` structure
+## input_file structure
   
-  The input file should be a `.tsv` formated file. At a mininum the input file should have the columns: `parent_file`, `scan`, `sequence`, `formula`, and ` `charge`.
+The input file should be a `.tsv` formatted file. At a minimum the input file should have the columns: `parent_file`, `scan`, `sequence`, `formula`, and `charge`.
  
- ### Minimal example
+### Minimal example input file
+
+| parent_file | scan | sequence | formula | charge |
+| ----------- | ---- | -------- | ------- | ------ |
+| file.mzML | 47677 | AEMMELNDR*FASYIEK | C84H130N20O29S2 | 2 |
+| file.mzML | 7415  | AGDKAGR*AGAGmPPYHR  | C72H113N25O23S |  4 |
+| file.mzML | 41163 | AGFLVTAR*GGSGIVVAR  | C72H122N22O21 | 2 |
+| file.mzML | 8204  | AGR*AGAGmPPYHR  | C57H88N20O17S | 3 |
+| file.mzML | 28728 | ALAR*EVDLKDYEDQQK | C82H132N22O31 | 2 |
+| file.mzML | 47838 | ALQEqLATqR*EAIILAR  | C83H143N23O29 | 2 |
+
+### output
+`envoMatch` Adds 2 columns to the input file and writes the file `<input_name>_env.tsv`
+
+1. `good_envelope`: A boolean representing whether the precursor envelope passed all the quality tests.
+2. `env_score`: The similarity score comparing the theoretical envelope to the observed.
+
+## Example
+
+To run the `envoMatch` example:
+```bash
+cd examples
+envoMatch input.tsv
+```
+ The expected output is `examples/output/input_env.tsv`
+
