@@ -12,8 +12,8 @@ PARENT_PARSER.add_argument('--env_co', default=0.8, type=float,
 PARENT_PARSER.add_argument('--mz_step_margin', default=2, type=int,
                            help='Margin above and below envelope in plot.')
 
-PARENT_PARSER.add_argument('-t', '--file_type', choices=['ms1', 'mzXML', 'mzML'], default='mzXML',
-                           help='MS-1 input file type. Default is mzXML.')
+PARENT_PARSER.add_argument('-t', '--file_type', choices=['ms1', 'mzXML', 'mzML'], default='mzML',
+                           help='MS-1 input file type. Default is mzML.')
 
 PARENT_PARSER.add_argument('--ms1_prefix', action='append',
                            help='Append directory to search path for ms1 files. '
@@ -44,7 +44,7 @@ PARENT_PARSER.add_argument('--parallel', choices=[0, 1], type=int, default=1,
                                 '1 is the default.')
 
 PARENT_PARSER.add_argument('--nThread', type=int, default=None,
-                           help='Chose how many threads to use for parllel processing. '
+                           help='Chose how many threads to use for parallel processing. '
                                 'This option overrides the --parallel option.')
 
 PARENT_PARSER.add_argument('--overwrite', type=int, choices=[0, 1], default=0,
