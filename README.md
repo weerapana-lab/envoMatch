@@ -5,8 +5,8 @@ Search for peptide isotopic envelopes in MS1 spectra.
 ```bash
 git clone https://github.com/weerapana-lab/envoMatch
 cd envoMatch
-python3 build setup.py
-pip install
+python3 setup.py build
+pip install .
 ```
 
 # Usage
