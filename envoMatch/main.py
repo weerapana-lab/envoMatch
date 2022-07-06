@@ -193,7 +193,7 @@ def main():
     # Get ms1 file paths by checking canidate_paths.
     for f in pep_stats['parent_file'].unique():
         canidate_paths = ['{}/{}.{}'.format(x, os.path.splitext(f)[0], args.file_type) for x in ms1_prefix]
-        path = None
+        path_temp = None
         for c in canidate_paths:
             if os.path.isfile(c):
                 if args.verbose:
