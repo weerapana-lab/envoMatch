@@ -102,14 +102,14 @@ def main():
     #get wd
     wd = os.path.dirname(os.path.abspath(args.input_file))
 
-    ionFinder_args = {arg: getattr(args, arg) for arg in vars(parent_args)}
+    envoMatch_args = {arg: getattr(args, arg) for arg in vars(parent_args)}
     _nThread = args.nThread
-    ionFinder_args['nThread'] = _nThread
-    ionFinder_args['plotEnv'] = '' if args.plotEnv else None
-    ionFinder_args['splitPlots'] = '' if args.splitPlots else None
-    ionFinder_args['verbose'] = '' if args.verbose else None
+    envoMatch_args['nThread'] = _nThread
+    envoMatch_args['plotEnv'] = '' if args.plotEnv else None
+    envoMatch_args['splitPlots'] = '' if args.splitPlots else None
+    envoMatch_args['verbose'] = '' if args.verbose else None
 
-    jobName = JOB_TYPES[args.jobType]['makeJob'](args.mem, args.ppn, args.walltime, wd, ionFinder_args, shell=args.shell)
+    jobName = JOB_TYPES[args.jobType]['makeJob'](args.mem, args.ppn, args.walltime, wd, envoMatch_args, shell=args.shell)
     command = '{} {}'.format(JOB_TYPES[args.jobType]['qsub'], jobName)
     if args.verbose and args.go:
         sys.stdout.write('{}\n'.format(command))
