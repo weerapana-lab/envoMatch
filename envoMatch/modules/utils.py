@@ -116,7 +116,7 @@ def getRank(lst, lstKey = lambda x: x):
     return [x[0] for x in values]
 
 
-def formula_to_pyteomics_formula(formula: str):
+def formula_to_pyteomics_formula(formula: str, charge: int=0):
     '''
     Convert a properly formatted formula to the stupid format used
     by the pyteomics package.
@@ -129,6 +129,9 @@ def formula_to_pyteomics_formula(formula: str):
         ret += '{}{}{}'.format(atom[1],
                                '' if atom[0] == '' else '[{}]'.format(atom[0]),
                                atom[2])
+    
+    if charge != 0:
+        ret += 'H+' + str(charge)
 
     return ret
 

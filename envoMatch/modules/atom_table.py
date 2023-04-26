@@ -9,6 +9,33 @@ from pyteomics.mass.mass import isotopologues
 
 from .utils import inRange, find_nearest_index
 
+
+DEFAULT_COMPOSITIONS = {'A': Counter({'C': 3, 'H': 5, 'O': 1, 'N': 1}),
+                        'C': Counter({'C': 5, 'H': 8, 'O': 2, 'N': 2, 'S': 1}),
+                        'D': Counter({'C': 4, 'H': 5, 'O': 3, 'N': 1}),
+                        'E': Counter({'C': 5, 'H': 7, 'O': 3, 'N': 1}),
+                        'F': Counter({'C': 9, 'H': 9, 'O': 1, 'N': 1}),
+                        'G': Counter({'C': 2, 'H': 3, 'O': 1, 'N': 1}),
+                        'H': Counter({'C': 6, 'H': 7, 'O': 1, 'N': 3}),
+                        'I': Counter({'C': 6, 'H': 11, 'O': 1, 'N': 1}),
+                        'K': Counter({'C': 6, 'H': 12, 'O': 1, 'N': 2}),
+                        'L': Counter({'C': 6, 'H': 11, 'O': 1, 'N': 1}),
+                        'M': Counter({'C': 5, 'H': 9, 'O': 1, 'N': 1, 'S': 1}),
+                        'N': Counter({'C': 4, 'H': 6, 'O': 2, 'N': 2}),
+                        'P': Counter({'C': 5, 'H': 7, 'O': 1, 'N': 1}),
+                        'Q': Counter({'C': 5, 'H': 8, 'O': 2, 'N': 2}),
+                        'R': Counter({'C': 6, 'H': 12, 'O': 1, 'N': 4}),
+                        'S': Counter({'C': 3, 'H': 5, 'O': 2, 'N': 1}),
+                        'T': Counter({'C': 4, 'H': 7, 'O': 2, 'N': 1}),
+                        'V': Counter({'C': 5, 'H': 9, 'O': 1, 'N': 1}),
+                        'W': Counter({'C': 11, 'H': 10, 'O': 1, 'N': 2}),
+                        'Y': Counter({'C': 9, 'H': 9, 'O': 2, 'N': 1}),
+                        'U': Counter({'C': 5, 'H': 8, 'O': 2, 'N': 2, 'Se': 1}),
+                        'C_term': Counter({'H': 1, 'O': 1}),
+                        'N_term': Counter({'H': 1}),
+                        '*': Counter({'H': -1, 'O': 1, 'N': -1})}
+
+
 class AtomTable:
     _nTermStr = 'N_term'
     _cTermStr = 'C_term'
@@ -27,7 +54,7 @@ class AtomTable:
                     "Cl": (35.45, 34.96885),
                     "Br": (79.904, 78.91834)}
 
-    def __init__(self, fname: str = ''):
+    def __init__(self, fname: str=None):
         self.fname = fname
         self.compositions = dict()
 
@@ -37,6 +64,10 @@ class AtomTable:
 
 
     def _read(self):
+        if self.fname is None:
+            self.compositions = DEFAULT_COMPOSITIONS
+            return
+
         with open(self.fname, 'rU') as inF:
             lines = inF.readlines()
 
@@ -58,14 +89,11 @@ class AtomTable:
                 continue
 
 
-    def read(self, fname: str = ''):
+    def read(self, fname: str=None):
 
         #check fname
-        if not self.fname:
+        if fname is not None:
             self.fname = fname
-        if not self.fname:
-            sys.stderr.write('fname is required!\n')
-            return False
         try:
             self._read()
         except (IOError, RuntimeError) as e:
@@ -78,7 +106,7 @@ class AtomTable:
         return True
 
 
-    def _getComposition(self, seq: str,
+    def _getComposition(self, seq: str, charge=0,
                        nTerm=True, cTerm=True):
 
         tempDict = Counter()
@@ -90,13 +118,16 @@ class AtomTable:
         if cTerm:
             tempDict.update(self.compositions[AtomTable._cTermStr])
 
+        if charge != 0:
+            tempDict['H+'] = charge
+
         return tempDict
 
 
     def getComposition(self, seq: str, charge: int=1,
                        nTerm=True, cTerm=True):
 
-        return Composition(self._getComposition(seq, nTerm, cTerm), charge=charge)
+        return Composition(self._getComposition(seq, charge=charge, nTerm=nTerm, cTerm=cTerm))
 
 
     def getMass(self, seq: str=None, composition: Dict=None,
@@ -185,8 +216,8 @@ def getEnvelope(composition: Composition,
                                 report_abundance=True,
                                 isotope_threshold=5e-3,
                                 overall_threshold=threshold):
-        c['H+'] = c.pop('H+[1]')
-        temp.append((c.mass(), a))
+        charge = c.pop('H+[1]')
+        temp.append((c.mass(charge=charge, charge_carrier='H+'), a))
 
     #combine and average mass defects
     if combineDefects:
