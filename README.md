@@ -35,8 +35,7 @@ optional arguments:
                         Additional directories are searched in the order they
                         are provided.
   -f {input,calculate}, --formula_source {input,calculate}
-                        Where should peptide formulas come from? Default is
-                        calculate.
+                        Where should peptide formulas come from? Default is input.
   -s {input,ms1}, --pre_scan_src {input,ms1} 
                         Where should precursor scans come from. Chose either
                         the "precursor_scan" column (input) or build precursor
