@@ -1,4 +1,5 @@
 
+from pandas import isnull
 import re
 
 _ATOM_RE = r'(\(\d+\))?([A-Z][a-z]?)(\d+)?'
@@ -124,6 +125,12 @@ def formula_to_pyteomics_formula(formula: str, charge: int=0):
     :param formula: Properly formatted formula.
     :return: pyteomics format formula.
     '''
+
+    if isnull(formula) or formula == '':
+        raise RuntimeError('Found empty formula! '
+                           'Use "--formula_source calculate" if you want '
+                           'to calculate peptide formulas in place.')
+
     ret = ''
     for atom in re.findall(_ATOM_RE, formula):
         ret += '{}{}{}'.format(atom[1],
@@ -134,6 +141,4 @@ def formula_to_pyteomics_formula(formula: str, charge: int=0):
         ret += 'H+' + str(charge)
 
     return ret
-
-
 

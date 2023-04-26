@@ -41,11 +41,18 @@ def parseArgs():
     return args
 
 
-def read_pep_stats(fname):
+def read_pep_stats(fname, formula_source):
     pep_stats = pd.read_csv(fname, sep='\t')
     #pep_stats = pep_stats[pep_stats['is_modified'].apply(bool)]
     pep_stats.reset_index(inplace=True, drop=True)
-    return(pep_stats)
+
+    if formula_source == 'input':
+        if 'formula' not in pep_stats.columns:
+            raise RuntimeError('Missing "formula" column. '
+                               'Use "--formula_source calculate" if you want '
+                               'to calculate peptide formulas in place.')
+
+    return pep_stats
 
 
 def _mkdir(path):
@@ -189,7 +196,7 @@ def main():
     _show_bar = not(args.verbose and args.parallel == 0)
 
     #done once
-    pep_stats = read_pep_stats(args.input_file)
+    pep_stats = read_pep_stats(args.input_file, args.formula_source)
     pep_stats['good_envelope'] = False
 
     atom_table = src.AtomTable(args.atom_table)
@@ -244,8 +251,8 @@ def main():
     nRow = len(pep_stats.index)
     sys.stdout.write('\nSearching for envelopes using {} thread(s)...\n'.format(min(_nThread, nRow)))
     env_data = list()
-    input_lst = [x[1] for x in pep_stats.iterrows()]
     if _show_bar:
+        input_lst = [x[1] for x in pep_stats.iterrows()]
         with Pool(processes=_nThread) as pool:
             env_data = list(tqdm(pool.imap(functools.partial(_annotate_ms1,
                                                              ms1_files=ms1_files,

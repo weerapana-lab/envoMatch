@@ -18,8 +18,8 @@ PARENT_PARSER.add_argument('--ms1_prefix', action='append',
                                 'By default only the current working directory is used. '
                                 'Additional directories are searched in the order they are provided.')
 
-PARENT_PARSER.add_argument('-f', '--formula_source', choices=['input', 'calculate'], default='calculate',
-                           help='Where should peptide formulas come from? Default is calculate.')
+PARENT_PARSER.add_argument('-f', '--formula_source', choices=['input', 'calculate'], default='input',
+                           help='Where should peptide formulas come from? Default is input.')
 
 PARENT_PARSER.add_argument('-s', '--pre_scan_src', choices=['input', 'ms1'], default='ms1',
                            help='Where should precursor scans come from. '
