@@ -20,6 +20,14 @@ def parseArgs():
 
     args = parser.parse_args()
 
+    if args.debug is not None:
+        if args.debug == 'pudb':
+            import pudb
+            pudb.set_trace()
+        elif args.debug == 'pdb':
+            import pdb
+            pdb.set_trace()
+
     #check ms1 prefix list
     if args.ms1_prefix is None:
         args.ms1_prefix = [os.path.dirname(os.path.abspath(args.input_file))]
@@ -84,7 +92,7 @@ def _annotate_ms1(row, ms1_files=None, args=None, atom_table=None):
             comp_temp = atom_table.getComposition(s, row['charge'])
         else:
             mod_diff = atom_table.getComposition(''.join(['*' for _ in range(sequences_i)]), 0, nTerm=False, cTerm=False)
-            comp_temp = Composition(formula=src.utils.formula_to_pyteomics_formula(row['formula']), charge=row['charge'])
+            comp_temp = Composition(formula=src.utils.formula_to_pyteomics_formula(row['formula'], charge=row['charge']))
             comp_temp -= mod_diff
 
         envs[s] = src.getEnvelope(comp_temp, threshold = 0.01)
@@ -101,7 +109,8 @@ def _annotate_ms1(row, ms1_files=None, args=None, atom_table=None):
     else:
         pre_scan_tmp = row['precursor_scan']
     spec = ms1_files[row['parent_file']].get_spectra(pre_scan_tmp,
-                                                     (min(mono_mzs.values()) - 5, max(mono_mzs.values()) + 5))
+                                                     (min(mono_mzs.values()) - 5,
+                                                      max(mono_mzs.values()) + 5))
 
     if spec is None:
         if _verbose:
@@ -210,14 +219,13 @@ def main():
     sys.stdout.write('\nReading ms1 files using {} thread(s)...\n'.format(min(_nThread, len(ms1_file_names))))
     if _show_bar:
         with Pool(processes=min(_nThread, len(ms1_file_names))) as pool:
-            ms1_files = list(tqdm(pool.imap(functools.partial(src.Ms1File,
-                                                              file_type=args.file_type,
+            ms1_files = list(tqdm(pool.imap(functools.partial(src.Ms1File, file_type=args.file_type,
                                                               build_precursor_list=(args.pre_scan_src == 'ms1')),
                                             ms1_file_names.values()),
                                   total=len(ms1_file_names),
                                   miniters=1,
                                   file=sys.stdout))
-        ms1_files = {n: f for n, f in zip(ms1_file_names.keys(), ms1_files)}
+        ms1_files = dict(zip(ms1_file_names.keys(), ms1_files))
     else:
         ms1_files = dict()
         for k, path in ms1_file_names.items():

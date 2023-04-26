@@ -2,8 +2,6 @@
 import os
 import argparse
 
-ATOM_TABLE_PATH = os.path.abspath('{}/../../db/atom_tables/cit_diff_mod_atoms.txt'.format(os.path.dirname(os.path.abspath(__file__))))
-
 PARENT_PARSER = argparse.ArgumentParser(add_help=False)
 
 PARENT_PARSER.add_argument('--env_co', default=0.8, type=float,
@@ -28,9 +26,8 @@ PARENT_PARSER.add_argument('-s', '--pre_scan_src', choices=['input', 'ms1'], def
                            'Chose either the "precursor_scan" column (input) or build precursor list '
                            'from input MS-1 files (ms1). Default is ms1.')
 
-PARENT_PARSER.add_argument('-a', '--atom_table', default=ATOM_TABLE_PATH,
-                           help='Path to atom table to use in calculating envelopes. '
-                                'Default is: {}'.format(ATOM_TABLE_PATH))
+PARENT_PARSER.add_argument('-a', '--atom_table', default=None,
+                           help='Path to atom table to use in calculating envelopes.')
 
 PARENT_PARSER.add_argument('--plotEnv', action='store_true', default=False,
                            help='Should plot of envelopes be saved?')
@@ -52,6 +49,9 @@ PARENT_PARSER.add_argument('--overwrite', type=int, choices=[0, 1], default=0,
 
 PARENT_PARSER.add_argument('-v', '--verbose', action='store_true', default=False,
                            help='Print verbose output?')
+
+PARENT_PARSER.add_argument('--debug', choices=['pudb', 'pdb'], default=None,
+                           help='Start main method in the selected debugger.')
 
 PARENT_PARSER.add_argument('input_file', type=str,
                            help='ionFinder output file to read.')
