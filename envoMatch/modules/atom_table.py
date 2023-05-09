@@ -40,19 +40,19 @@ class AtomTable:
     _nTermStr = 'N_term'
     _cTermStr = 'C_term'
 
-    _atom_masses = {"C": (12.011, 12),
-                    "H": (1.008, 1.00783),
-                    "H+": (1.008, 1.00783),
-                    "O": (15.999, 15.99491),
-                    "N": (14.007, 14.00307),
-                    "S": (32.06, 31.97207),
-                    "P": (30.97376, 30.97376),
-                    "N[15]": (15.00011, 15.00011),
-                    "H[2]": (2.0141, 2.0141),
-                    "C[13]": (13.00335, 13.00335),
-                    "Se": (78.96, 79.91652),
-                    "Cl": (35.45, 34.96885),
-                    "Br": (79.904, 78.91834)}
+    _atom_masses = {"C": 12,
+                    "H": 1.00783,
+                    "H+": 1.00783,
+                    "O": 15.99491,
+                    "N": 14.00307,
+                    "S": 31.97207,
+                    "P": 30.97376,
+                    "N[15]": 15.00011,
+                    "H[2]": 2.0141,
+                    "C[13]": 13.00335,
+                    "Se": 79.91652,
+                    "Cl": 34.96885,
+                    "Br": 78.91834}
 
     def __init__(self, fname: str=None):
         self.fname = fname
@@ -131,8 +131,7 @@ class AtomTable:
 
 
     def getMass(self, seq: str=None, composition: Dict=None,
-                charge: int=0, mono=True,
-                nTerm=True, cTerm=True) -> float:
+                charge: int=0, nTerm=True, cTerm=True) -> float:
         '''
         Calculate mass of sequence or formula.
 
@@ -154,10 +153,9 @@ class AtomTable:
             if charge is not None:
                 _comp['H+'] = charge
 
-        massIndex = 1 if mono else 0
         ret = float(0)
         for atom, count in _comp.items():
-            ret += self._atom_masses[atom][massIndex] * count
+            ret += self._atom_masses[atom] * count
 
         return ret
 

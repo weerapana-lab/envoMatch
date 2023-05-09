@@ -105,7 +105,7 @@ def _annotate_ms1(row, ms1_files=None, args=None, atom_table=None):
         envs[s] = src.getEnvelope(comp_temp, threshold = 0.01)
         mono_mass = atom_table.getMass(composition=comp_temp, charge=0)
         charge = row['charge']
-        mono_mzs[s] = (mono_mass + charge) / charge
+        mono_mzs[s] = (mono_mass + (charge * src.AtomTable._atom_masses['H'])) / charge
 
     if args.pre_scan_src == 'ms1':
         try:
@@ -265,6 +265,7 @@ def main():
     else:
         for i, row in pep_stats.iterrows():
             sys.stdout.write('\tWorking on {} of {}\r'.format(i, nRow))
+            sys.stdout.flush()
             env_data.append(_annotate_ms1(row, ms1_files, args, atom_table))
 
     pep_stats['good_envelope'] = [x[0] for x in env_data]

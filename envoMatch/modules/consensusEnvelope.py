@@ -73,6 +73,8 @@ def _getTolerance(toleranceType, _range):
 
 class ConsensusEnvelope(object):
 
+    H1_MASS = 1.00783,
+
     @staticmethod
     def _clearLinks(lst):
         for i, _ in enumerate(lst):
@@ -115,7 +117,7 @@ class ConsensusEnvelope(object):
         if mono_mz is not None:
             self._mono_mz = mono_mz
         elif mono_mass is not None and charge is not None:
-            self._mono_mz = (mono_mass + charge) / charge
+            self._mono_mz = (mono_mass + (charge * H1_MASS)) / charge
         else:
             raise RuntimeError('Either mono_mz or mono_mass and charge are required!')
 
@@ -126,7 +128,7 @@ class ConsensusEnvelope(object):
                 indices.append(i)
 
         if len(indices) != 1:
-            raise RuntimeError('Could not find mono_mz in theoretical env!')
+            raise RuntimeError(f'Could not find mono_mz in theoretical env for sequence {self.sequence}!')
         self._mono_index = indices[0]
 
 
@@ -168,7 +170,7 @@ class ConsensusEnvelope(object):
 
             if len(range_list) == 0:
                 continue
-            elif len(range_list) == 1:
+            if len(range_list) == 1:
                 best_i = range_list[0]
             else:
                 tempMax = range_list[0]
@@ -184,15 +186,16 @@ class ConsensusEnvelope(object):
                         tempMax = j
                 best_i = tempMax
 
-            self._actual[best_i].link = peak
-            self._theoretical[i].link = self._actual[best_i]
+            if self._actual[best_i].point.int > 0:
+                self._actual[best_i].link = peak
+                self._theoretical[i].link = self._actual[best_i]
 
         if remove_unlabeled:
             self._actual = [x for x in self._actual if x.link is not None]
 
         if normalize:
             try:
-                max_int = max([x.point.int for x in self._actual if x.link is not None])
+                max_int = max(x.point.int for x in self._actual if x.link is not None)
             except ValueError:
                 if verbose:
                     sys.stdout.write('No points in envelope found!\n')
